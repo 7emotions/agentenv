@@ -493,7 +493,7 @@ Max Concurrent: 5 (Waves 1, 3)
 
   **Commit**: YES — `feat(lockfile): v1→v3 auto-migration on read` — `pkg/lockfile/reader.go`, `pkg/lockfile/reader_test.go`
 
-- [ ] 9. Lockfile v3 往返测试
+- [x] 9. Lockfile v3 往返测试
 
   **What to do**: 写→读→字段不丢失；v1→v3→v3 迁移往返
 
@@ -509,7 +509,7 @@ Max Concurrent: 5 (Waves 1, 3)
 
   **Commit**: YES — `test(lockfile): v3 roundtrip and v1→v3 migration` — `pkg/lockfile/*_test.go`
 
-- [ ] 10. 标记旧 resolver 弃用
+- [x] 10. 标记旧 resolver 弃用
 
   **What to do**: `TopologicalBacktrackResolver` + `NewResolver()` + version.go 导出函数 → `// Deprecated:` 注释
 
@@ -527,7 +527,7 @@ Max Concurrent: 5 (Waves 1, 3)
 
   **Commit**: YES — `chore(resolver): deprecate old resolver functions` — `pkg/resolver/resolver.go`, `version.go`
 
-- [ ] 11. TDD RED: 简单图测试
+- [x] 11. TDD RED: 简单图测试
 
   **What to do**: 创建 `pkg/resolver/pubgrub_resolver_test.go`，测试 PubGrubResolver 在无冲突简单图上的行为。单根 A@^1.0 依赖 B@>=2.0，B@2.1.0 存在，B 无依赖。验证：Resolver 返回 ResolvedPackage{A@1.x, B@2.1.0}
 
@@ -547,7 +547,7 @@ Max Concurrent: 5 (Waves 1, 3)
 
   **Commit**: YES — `test(resolver): TDD simple graph test for PubGrubResolver` — `pkg/resolver/pubgrub_resolver_test.go`
 
-- [ ] 12. TDD RED: 钻石冲突测试
+- [x] 12. TDD RED: 钻石冲突测试
 
   **What to do**: A@^1 → B@>=2.0，C@^1 → B@<2.0。B 不存在同时满足两者的版本。测试 PubGrubResolver 应返回包含 "A" "C" "B" 名字的冲突错误
 
@@ -565,7 +565,7 @@ Max Concurrent: 5 (Waves 1, 3)
 
   **Commit**: YES — `test(resolver): TDD diamond conflict test` — `pkg/resolver/pubgrub_resolver_test.go`
 
-- [ ] 13. TDD RED: 不可满足约束测试
+- [x] 13. TDD RED: 不可满足约束测试
 
   **What to do**: A@^1 → B@>=2.0，B 只有 1.0.0 版本。测试应失败——无版本满足约束
 
@@ -579,7 +579,7 @@ Max Concurrent: 5 (Waves 1, 3)
   **Evidence**: `.sisyphus/evidence/task-13-unsat-red.txt`
   **Commit**: YES — `test(resolver): TDD unsatisfiable constraint test`
 
-- [ ] 14. TDD RED: 深层依赖链冲突测试
+- [x] 14. TDD RED: 深层依赖链冲突测试
 
   **What to do**: A→B→C→D→E，其中 D 和 E 各自要求不同版本。验证多层回溯正确
 
@@ -593,7 +593,7 @@ Max Concurrent: 5 (Waves 1, 3)
   **Evidence**: `.sisyphus/evidence/task-14-deep-red.txt`
   **Commit**: YES — `test(resolver): TDD deep chain conflict test`
 
-- [ ] 15. TDD RED: latest/* 约束测试
+- [x] 15. TDD RED: latest/* 约束测试
 
   **What to do**: 包无版本标签 → 约束 `latest` 或 `*` 应匹配 "latest" 版本
 

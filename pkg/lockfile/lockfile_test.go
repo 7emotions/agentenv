@@ -203,6 +203,239 @@ func TestEmptyLockfile(t *testing.T) {
 	}
 }
 
+func TestLockfileV3Roundtrip(t *testing.T) {
+	// Build a Lockfile with v3 fields: ResolvedBy, Dep.Type, Dep.Source.
+	deps := []types.LockedDep{
+		{
+			Name:     "dep-a",
+			Type:     types.PackageTypeSkill,
+			Version:  "1.0.0",
+			Resolved: "sha256:abc",
+			Source:   "npm:@scope/pkg",
+		},
+		{
+			Name:     "dep-b",
+			Type:     types.PackageTypeMCP,
+			Version:  "2.0.0",
+			Resolved: "sha256:def",
+			Source:   "github:owner/mcp",
+		},
+	}
+
+	pkgs := []types.LockedPackage{
+		{
+			Name:         "test-pkg",
+			Type:         types.PackageTypeSkill,
+			Source:       "github:owner/repo",
+			Version:      "2.0.0",
+			Resolved:     "https://example.com/pkg.tar.gz",
+			SHA256:       "sha256:123",
+			ResolvedBy:   "(root)",
+			Dependencies: deps,
+		},
+		{
+			Name:       "test-mcp",
+			Type:       types.PackageTypeMCP,
+			Source:     "npm:@scope/mcp",
+			Version:    "1.0.0",
+			Resolved:   "1.0.0",
+			ResolvedBy: "test-skill@1.0.0",
+		},
+	}
+
+	lf := &types.Lockfile{
+		Version:   3,
+		Generated: "2025-06-01T00:00:00Z",
+		Packages:  pkgs,
+		Environment: types.LockfileEnvSnapshot{
+			SkillsCount: 1,
+			MCPsCount:   1,
+		},
+	}
+
+	// Write v3 lockfile to bytes.
+	data, err := parser.WriteLockfile(lf)
+	if err != nil {
+		t.Fatalf("WriteLockfile: %v", err)
+	}
+
+	// Read it back.
+	got, err := Read(data)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+
+	// Verify top-level fields.
+	if got.Version != 3 {
+		t.Errorf("Version = %d, want 3", got.Version)
+	}
+	if got.Generated != "2025-06-01T00:00:00Z" {
+		t.Errorf("Generated = %q, want %q", got.Generated, "2025-06-01T00:00:00Z")
+	}
+	if len(got.Packages) != 2 {
+		t.Fatalf("len(Packages) = %d, want 2", len(got.Packages))
+	}
+
+	// Verify first package (skill with deps).
+	p0 := got.Packages[0]
+	if p0.Name != "test-pkg" {
+		t.Errorf("Package[0] Name = %q, want %q", p0.Name, "test-pkg")
+	}
+	if p0.Type != types.PackageTypeSkill {
+		t.Errorf("Package[0] Type = %q, want %q", p0.Type, types.PackageTypeSkill)
+	}
+	if p0.Source != "github:owner/repo" {
+		t.Errorf("Package[0] Source = %q, want %q", p0.Source, "github:owner/repo")
+	}
+	if p0.Version != "2.0.0" {
+		t.Errorf("Package[0] Version = %q, want %q", p0.Version, "2.0.0")
+	}
+	if p0.Resolved != "https://example.com/pkg.tar.gz" {
+		t.Errorf("Package[0] Resolved = %q, want %q", p0.Resolved, "https://example.com/pkg.tar.gz")
+	}
+	if p0.SHA256 != "sha256:123" {
+		t.Errorf("Package[0] SHA256 = %q, want %q", p0.SHA256, "sha256:123")
+	}
+	if p0.ResolvedBy != "(root)" {
+		t.Errorf("Package[0] ResolvedBy = %q, want %q", p0.ResolvedBy, "(root)")
+	}
+
+	// Verify dependencies on first package.
+	if len(p0.Dependencies) != 2 {
+		t.Fatalf("Package[0] len(Dependencies) = %d, want 2", len(p0.Dependencies))
+	}
+
+	gotDepA := p0.Dependencies[0]
+	if gotDepA.Name != "dep-a" {
+		t.Errorf("Dep[0] Name = %q, want %q", gotDepA.Name, "dep-a")
+	}
+	if gotDepA.Type != types.PackageTypeSkill {
+		t.Errorf("Dep[0] Type = %q, want %q", gotDepA.Type, types.PackageTypeSkill)
+	}
+	if gotDepA.Version != "1.0.0" {
+		t.Errorf("Dep[0] Version = %q, want %q", gotDepA.Version, "1.0.0")
+	}
+	if gotDepA.Resolved != "sha256:abc" {
+		t.Errorf("Dep[0] Resolved = %q, want %q", gotDepA.Resolved, "sha256:abc")
+	}
+	if gotDepA.Source != "npm:@scope/pkg" {
+		t.Errorf("Dep[0] Source = %q, want %q", gotDepA.Source, "npm:@scope/pkg")
+	}
+
+	gotDepB := p0.Dependencies[1]
+	if gotDepB.Name != "dep-b" {
+		t.Errorf("Dep[1] Name = %q, want %q", gotDepB.Name, "dep-b")
+	}
+	if gotDepB.Type != types.PackageTypeMCP {
+		t.Errorf("Dep[1] Type = %q, want %q", gotDepB.Type, types.PackageTypeMCP)
+	}
+	if gotDepB.Version != "2.0.0" {
+		t.Errorf("Dep[1] Version = %q, want %q", gotDepB.Version, "2.0.0")
+	}
+	if gotDepB.Resolved != "sha256:def" {
+		t.Errorf("Dep[1] Resolved = %q, want %q", gotDepB.Resolved, "sha256:def")
+	}
+	if gotDepB.Source != "github:owner/mcp" {
+		t.Errorf("Dep[1] Source = %q, want %q", gotDepB.Source, "github:owner/mcp")
+	}
+
+	// Verify second package (mcp with ResolvedBy).
+	p1 := got.Packages[1]
+	if p1.Name != "test-mcp" {
+		t.Errorf("Package[1] Name = %q, want %q", p1.Name, "test-mcp")
+	}
+	if p1.Type != types.PackageTypeMCP {
+		t.Errorf("Package[1] Type = %q, want %q", p1.Type, types.PackageTypeMCP)
+	}
+	if p1.ResolvedBy != "test-skill@1.0.0" {
+		t.Errorf("Package[1] ResolvedBy = %q, want %q", p1.ResolvedBy, "test-skill@1.0.0")
+	}
+}
+
+func TestLockfileV1ToV3Migration(t *testing.T) {
+	// v1 lockfile YAML without v3 fields (ResolvedBy, Dep.Type, Dep.Source).
+	v1YAML := `version: 1
+generated: "2025-01-01T00:00:00Z"
+packages:
+  - name: test-pkg
+    type: skill
+    source: github:owner/repo
+    version: "1.0.0"
+    resolved: https://example.com/pkg.tar.gz
+    dependencies:
+      - name: dep-a
+        version: "1.0.0"
+        resolved: sha256:abc
+  - name: test-mcp
+    type: mcp
+    source: npm:@scope/mcp
+    version: "^2.0"
+    resolved: "2.1.0"
+`
+
+	// Read v1 lockfile.
+	lf, err := parser.ParseLockfile([]byte(v1YAML))
+	if err != nil {
+		t.Fatalf("ParseLockfile(v1): %v", err)
+	}
+
+	if lf.Version != 1 {
+		t.Errorf("Version = %d, want 1", lf.Version)
+	}
+
+	// Upgrade to v3 and write.
+	lf.Version = 3
+	data, err := parser.WriteLockfile(lf)
+	if err != nil {
+		t.Fatalf("WriteLockfile: %v", err)
+	}
+
+	// Read back the v3 lockfile.
+	got, err := Read(data)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+
+	if got.Version != 3 {
+		t.Errorf("Version = %d, want 3", got.Version)
+	}
+
+	// Verify packages exist.
+	if len(got.Packages) != 2 {
+		t.Fatalf("len(Packages) = %d, want 2", len(got.Packages))
+	}
+
+	// v1 packages should have empty ResolvedBy.
+	for i, pkg := range got.Packages {
+		if pkg.ResolvedBy != "" {
+			t.Errorf("Package[%d] ResolvedBy = %q, want empty string for migrated v1 package", i, pkg.ResolvedBy)
+		}
+	}
+
+	// v1 deps should have empty Type (default PackageType) and empty Source.
+	p0 := got.Packages[0]
+	if len(p0.Dependencies) != 1 {
+		t.Fatalf("len(Dependencies) = %d, want 1", len(p0.Dependencies))
+	}
+
+	gotDep := p0.Dependencies[0]
+	if gotDep.Name != "dep-a" {
+		t.Errorf("Dep Name = %q, want %q", gotDep.Name, "dep-a")
+	}
+	if gotDep.Type != "" {
+		t.Errorf("Dep Type for v1 = %q, want empty string", gotDep.Type)
+	}
+	if gotDep.Source != "" {
+		t.Errorf("Dep Source for v1 = %q, want empty string", gotDep.Source)
+	}
+	if gotDep.Version != "1.0.0" {
+		t.Errorf("Dep Version = %q, want %q", gotDep.Version, "1.0.0")
+	}
+	if gotDep.Resolved != "sha256:abc" {
+		t.Errorf("Dep Resolved = %q, want %q", gotDep.Resolved, "sha256:abc")
+	}
+}
+
 func TestLockfileV2RoundTrip(t *testing.T) {
 	// Build a LockedDep with a Source field (v2 format).
 	deps := []types.LockedDep{

@@ -75,6 +75,8 @@ func DefaultResolveOptions() ResolveOptions {
 	}
 }
 
+// Deprecated: Use PubGrubResolver for new code.
+//
 // TopologicalBacktrackResolver resolves dependencies using a topological
 // queue with backtracking for conflict detection.
 //
@@ -90,7 +92,7 @@ type TopologicalBacktrackResolver struct {
 	DepSource func(name, pkgType string) string
 }
 
-// NewResolver creates a new TopologicalBacktrackResolver.
+// Deprecated: Use PubGrubResolver for new code.
 func NewResolver() *TopologicalBacktrackResolver {
 	return &TopologicalBacktrackResolver{
 		handlers: make(map[string]source.SourceHandler),

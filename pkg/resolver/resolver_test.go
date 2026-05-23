@@ -597,3 +597,52 @@ func TestSameNameDifferentTypeCollision(t *testing.T) {
 		t.Errorf("warning should mention 'run', got: %q", result.Warnings[0])
 	}
 }
+
+func TestPubGrubDiamondConflict(t *testing.T) {
+	// Diamond dependency conflict (PubGrub algorithm):
+	//   Root depends on A@^1.0 and C@^1.0
+	//   A@1.0 depends on B@>=2.0
+	//   C@1.0 depends on B@<2.0
+	//   B has versions 1.0.0, 2.0.0, 3.0.0
+	//   Expected: Resolve fails with error mentioning "A", "C", "B"
+	//     (PubGrub's default conflict chain)
+	//
+	// RED phase: PubGrubResolver.Resolve is not yet implemented.
+	// This test is expected to FAIL. GREEN phase will tighten assertions.
+
+	m := &mockSource{
+		versions: map[string][]string{
+			"github:test/A": {"1.0.0"},
+			"github:test/B": {"3.0.0", "2.0.0", "1.0.0"},
+			"github:test/C": {"1.0.0"},
+		},
+		pkgs: map[string][]byte{
+			"github:test/A": makeAgentPkg("A", "1.0.0", "B@>=2.0"),
+			"github:test/B": makeAgentPkg("B", "2.0.0"),
+			"github:test/C": makeAgentPkg("C", "1.0.0", "B@<2.0"),
+		},
+	}
+
+	r := NewPubGrubResolver()
+	_, err := r.Resolve(context.Background(), []PackageRequest{
+		req("A", "github:test/A", "^1.0"),
+		req("C", "github:test/C", "^1.0"),
+	}, DefaultResolveOptions())
+
+	if err == nil {
+		t.Fatal("expected error (diamond dependency conflict), got nil")
+	}
+
+	// PubGrub's default conflict chain should mention all three packages involved.
+	if !strings.Contains(err.Error(), "A") {
+		t.Error("error should mention 'A'")
+	}
+	if !strings.Contains(err.Error(), "C") {
+		t.Error("error should mention 'C'")
+	}
+	if !strings.Contains(err.Error(), "B") {
+		t.Error("error should mention 'B'")
+	}
+
+	_ = m // mock setup for GREEN phase when PubGrubResolver uses it
+}

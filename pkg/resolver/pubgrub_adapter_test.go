@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
+	"strings"
 	"testing"
 
 	"github.com/7emotions/agentenv/pkg/types"
@@ -413,3 +415,109 @@ var errFakeNetwork = &mockError{"fake network error"}
 type mockError struct{ msg string }
 
 func (e *mockError) Error() string { return e.msg }
+
+func TestPubGrubDeepConflict(t *testing.T) {
+	hashAs := map[string]*mockAdapterHandler{}
+
+	addHandler := func(name string, versions []string, deps string) {
+		h := &mockAdapterHandler{versions: versions}
+		if deps != "" {
+			h.fetchData = makeTarGz(t, deps)
+		}
+		hashAs[name] = h
+	}
+
+	addHandler("A", []string{"1.0.0"}, `name: A
+version: "1.0.0"
+source: github:test/A
+dependencies:
+  - name: B
+    type: skill
+    constraint: "^1.0.0"
+`)
+
+	addHandler("B", []string{"1.0.0"}, `name: B
+version: "1.0.0"
+source: github:test/B
+dependencies:
+  - name: C
+    type: skill
+    constraint: "^1.0.0"
+`)
+
+	addHandler("C", []string{"1.0.0"}, `name: C
+version: "1.0.0"
+source: github:test/C
+dependencies:
+  - name: D
+    type: skill
+    constraint: "^1.0.0"
+`)
+
+	addHandler("D", []string{"1.0.0"}, `name: D
+version: "1.0.0"
+source: github:test/D
+dependencies:
+  - name: E
+    type: skill
+    constraint: "^1.0.0"
+  - name: F
+    type: skill
+    constraint: ">=1.0.0"
+`)
+
+	addHandler("E", []string{"1.0.0"}, `name: E
+version: "1.0.0"
+source: github:test/E
+dependencies:
+  - name: F
+    type: skill
+    constraint: "<2.0.0"
+`)
+
+	addHandler("F", []string{"1.0.0", "2.0.0"}, `name: F
+version: "2.0.0"
+source: github:test/F
+`)
+
+	_ = hashAs
+
+	resolver := NewPubGrubResolver(WithMaxSteps(200))
+
+	requests := []PackageRequest{
+		{Name: "A", Type: "skill", Source: "github:test/A", Constraint: "^1.0.0"},
+	}
+
+	ctx := context.Background()
+	result, err := resolver.Resolve(ctx, requests, DefaultResolveOptions())
+
+	if err != nil {
+		if strings.Contains(err.Error(), "not yet implemented") {
+			t.Fatal("RED: PubGrubResolver.Resolve not yet implemented — expected successful resolution")
+		}
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result == nil {
+		t.Fatal("expected non-nil result")
+	}
+	if len(result.Packages) == 0 {
+		t.Fatal("expected at least one resolved package")
+	}
+
+	pkgNames := make(map[string]bool)
+	for _, pkg := range result.Packages {
+		pkgNames[pkg.Name] = true
+	}
+	for _, want := range []string{"A", "B", "C", "D", "E", "F"} {
+		if !pkgNames[want] {
+			t.Errorf("expected package %q in resolved set", want)
+		}
+	}
+	if pkgNames["F"] {
+		for _, pkg := range result.Packages {
+			if pkg.Name == "F" && pkg.Resolved != "1.0.0" {
+				t.Errorf("F resolved = %q, want 1.0.0 (intersection of >=1.0.0 and <2.0.0)", pkg.Resolved)
+			}
+		}
+	}
+}

@@ -15,6 +15,8 @@ type VersionConstraint struct {
 	IsLatest   bool                // true if constraint was "latest" or "*"
 }
 
+// Deprecated: Use PubGrubResolver for new code.
+//
 // ParseConstraint parses a version constraint string.
 //
 // Supported formats:
@@ -61,6 +63,8 @@ func (vc VersionConstraint) Satisfies(version string) bool {
 	return vc.Constraint.Check(v)
 }
 
+// Deprecated: Use PubGrubResolver for new code.
+//
 // SortVersions sorts version strings in descending order with non-prerelease
 // versions first. For example: ["1.0.0-alpha", "1.0.0", "2.0.0", "1.5.0"]
 // becomes ["2.0.0", "1.5.0", "1.0.0", "1.0.0-alpha"].
@@ -99,6 +103,8 @@ func SortVersions(versions []string) []string {
 	return result
 }
 
+// Deprecated: Use PubGrubResolver for new code.
+//
 // HighestVersion returns the highest non-prerelease version from a list.
 func HighestVersion(versions []string) (string, error) {
 	if len(versions) == 0 {
@@ -126,6 +132,8 @@ func HighestVersion(versions []string) (string, error) {
 	return best.String(), nil
 }
 
+// Deprecated: Use PubGrubResolver for new code.
+//
 // HighestCompatible returns the highest version from the list that satisfies
 // the given constraint. Pre-releases are only considered if explicitly
 // requested by the constraint.
@@ -139,6 +147,8 @@ func HighestCompatible(versions []string, constraint VersionConstraint) (string,
 	return "", fmt.Errorf("no version satisfies constraint %q", constraint.Raw)
 }
 
+// Deprecated: Use PubGrubResolver for new code.
+//
 // ConstraintIntersection finds the intersection of two constraints.
 // Returns the overlapping constraint range as a string, or an error if
 // the constraints do not overlap.
