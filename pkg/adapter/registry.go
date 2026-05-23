@@ -53,4 +53,6 @@ func List() []string {
 func init() {
 	Register("claude-code", NewClaudeCodeAdapter())
 	Register("opencode", NewOpenCodeAdapter())
+	Register("cursor", NewCursorAdapter())
+	Register("codex", NewCodexAdapter())
 }
