@@ -342,11 +342,15 @@ func (r *TopologicalBacktrackResolver) Resolve(ctx context.Context, requests []P
 				if depConstraint == "" {
 					depConstraint = "*"
 				}
+				depSource := r.depSource(dep.Name, string(dep.Type))
+				if dep.Source != "" {
+					depSource = dep.Source
+				}
 				queue = append(queue, queuedRequest{
 					request: PackageRequest{
 						Name:       dep.Name,
 						Type:       string(dep.Type),
-						Source:     r.depSource(dep.Name, string(dep.Type)),
+						Source:     depSource,
 						Constraint: depConstraint,
 					},
 					depth:  q.depth + 1,
