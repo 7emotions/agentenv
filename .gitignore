@@ -1,0 +1,22 @@
+/dist/
+.agentenv-local-test/
+
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+agentenv
+
+# Test binary
+*.test
+
+# Output of go coverage
+*.out
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
