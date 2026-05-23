@@ -327,7 +327,14 @@ func activateEnv(ctx context.Context, name string, cmd *cobra.Command) error {
 	activeLock := filepath.Join(root, "ACTIVE")
 	if data, err := os.ReadFile(activeLock); err == nil {
 		currentActive := strings.TrimSpace(string(data))
-		if currentActive != "" && currentActive != name {
+		// Strip :framework suffix for name comparison (ACTIVE lock format: <name>:<framework>)
+		currentName := currentActive
+		if idx := strings.LastIndex(currentActive, ":"); idx >= 0 {
+			if idx > 0 {
+				currentName = currentActive[:idx]
+			}
+		}
+		if currentName != "" && currentName != name {
 			if err := deactivateEnv(ctx, currentActive, root); err != nil {
 				return agentenvError.SystemError(
 					fmt.Sprintf("Cannot deactivate current environment %q", currentActive),
@@ -424,7 +431,8 @@ func activateEnv(ctx context.Context, name string, cmd *cobra.Command) error {
 	}
 
 	// 11. Write ACTIVE lock
-	if err := os.WriteFile(activeLock, []byte(name), 0o644); err != nil {
+	lockContent := fmt.Sprintf("%s:%s", name, framework)
+	if err := os.WriteFile(activeLock, []byte(lockContent), 0o644); err != nil {
 		// Rollback on lock write failure
 		rollback(ctx, a, actions, backupID)
 		return agentenvError.SystemError(
@@ -549,28 +557,43 @@ func installAgentFromStore(ctx context.Context, a adapter.AgentAdapter,
 }
 
 // deactivateEnv deactivates the named environment without requiring a cobra Command.
+// The name parameter is the content of the ACTIVE lock file, in format <name>:<framework>
+// (new format) or just <name> (legacy format for backward compatibility).
 func deactivateEnv(ctx context.Context, name string, root string) error {
-	envDir := filepath.Join(root, "envs", name)
-
-	state, err := readState(envDir)
-	if err != nil {
-		// Can't determine framework — try claude-code as default
-		state = map[string]interface{}{"agent_framework": "claude-code"}
+	// Parse env name and framework from ACTIVE lock format <name>:<framework>
+	envName := name
+	var framework string
+	if idx := strings.LastIndex(name, ":"); idx >= 0 {
+		envName = name[:idx]
+		framework = name[idx+1:]
 	}
-	framework := agentFrameworkFromState(state)
+
+	envDir := filepath.Join(root, "envs", envName)
+
+	if framework == "" {
+		// Backward compat: old-format ACTIVE lock (just name), determine from state.json
+		state, err := readState(envDir)
+		if err != nil {
+			return agentenvError.SystemError(
+				fmt.Sprintf("Cannot determine agent framework for environment %q", envName),
+				"The environment may be corrupted or use an old format.").WithCause(err)
+		}
+		framework = agentFrameworkFromState(state)
+		fmt.Fprintf(os.Stderr, "WARNING: environment %q uses legacy ACTIVE lock format\n", envName)
+	}
 
 	a, err := getAdapter(framework)
 	if err != nil {
 		return agentenvError.SystemError(
 			fmt.Sprintf("No adapter available for %q", framework),
-			"Supported frameworks: claude-code.").WithCause(err)
+			"Supported frameworks: claude-code, opencode, cursor.").WithCause(err)
 	}
 
 	// Read manifest and remove all managed items
 	manifest, err := a.ReadManifest(ctx)
 	if err != nil {
 		return agentenvError.SystemError(
-			fmt.Sprintf("Cannot read manifest for %s", name),
+			fmt.Sprintf("Cannot read manifest for %s", envName),
 			"The manifest may be corrupted.").WithCause(err)
 	}
 
