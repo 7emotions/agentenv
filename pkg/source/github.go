@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agentenv/agentenv/pkg/types"
+	"github.com/7emotions/agentenv/pkg/types"
 )
 
 // semverRe matches a semantic version string optionally prefixed with 'v'.

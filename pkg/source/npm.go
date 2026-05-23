@@ -10,7 +10,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/agentenv/agentenv/pkg/types"
+	"github.com/7emotions/agentenv/pkg/types"
 )
 
 // NPMSource fetches packages from the npm registry.

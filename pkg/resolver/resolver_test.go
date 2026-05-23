@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agentenv/agentenv/pkg/types"
+	"github.com/7emotions/agentenv/pkg/types"
 )
 
 type mockSource struct {

@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agentenv/agentenv/pkg/types"
+	"github.com/7emotions/agentenv/pkg/types"
 )
 
 func TestGitHubListVersionsWithMock(t *testing.T) {

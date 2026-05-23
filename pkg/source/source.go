@@ -5,7 +5,7 @@ package source
 import (
 	"fmt"
 
-	"github.com/agentenv/agentenv/pkg/types"
+	"github.com/7emotions/agentenv/pkg/types"
 )
 
 // VersionInfo describes a single version available from a source.

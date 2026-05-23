@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/agentenv/agentenv/pkg/parser"
-	"github.com/agentenv/agentenv/pkg/resolver"
-	"github.com/agentenv/agentenv/pkg/types"
+	"github.com/7emotions/agentenv/pkg/parser"
+	"github.com/7emotions/agentenv/pkg/resolver"
+	"github.com/7emotions/agentenv/pkg/types"
 )
 
 func TestGenerate(t *testing.T) {

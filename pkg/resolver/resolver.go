@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agentenv/agentenv/pkg/parser"
-	"github.com/agentenv/agentenv/pkg/source"
-	"github.com/agentenv/agentenv/pkg/types"
+	"github.com/7emotions/agentenv/pkg/parser"
+	"github.com/7emotions/agentenv/pkg/source"
+	"github.com/7emotions/agentenv/pkg/types"
 )
 
 // ResolvedPackage is the output of resolution for a single package.
