@@ -20,3 +20,6 @@ agentenv
 .vscode/
 *.swp
 *.swo
+
+# CodeGraph
+.codegraph/
