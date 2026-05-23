@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/agentenv/agentenv/pkg/types"
+	"github.com/7emotions/agentenv/pkg/types"
 	"gopkg.in/yaml.v3"
 )
 

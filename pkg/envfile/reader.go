@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/agentenv/agentenv/pkg/parser"
-	"github.com/agentenv/agentenv/pkg/types"
+	"github.com/7emotions/agentenv/pkg/parser"
+	"github.com/7emotions/agentenv/pkg/types"
 	"gopkg.in/yaml.v3"
 )
 

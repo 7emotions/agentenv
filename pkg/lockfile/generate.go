@@ -4,8 +4,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/agentenv/agentenv/pkg/resolver"
-	"github.com/agentenv/agentenv/pkg/types"
+	"github.com/7emotions/agentenv/pkg/resolver"
+	"github.com/7emotions/agentenv/pkg/types"
 )
 
 // Generate creates a Lockfile from a list of resolved packages.

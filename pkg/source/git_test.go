@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/agentenv/agentenv/pkg/types"
+	"github.com/7emotions/agentenv/pkg/types"
 )
 
 // setupGitRepo creates a temporary git repository with tags and returns the path.

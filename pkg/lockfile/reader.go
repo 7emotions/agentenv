@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/agentenv/agentenv/pkg/parser"
-	"github.com/agentenv/agentenv/pkg/types"
+	"github.com/7emotions/agentenv/pkg/parser"
+	"github.com/7emotions/agentenv/pkg/types"
 )
 
 // Read parses a lockfile from bytes and validates required fields.

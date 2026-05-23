@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/agentenv/agentenv/pkg/types"
+	"github.com/7emotions/agentenv/pkg/types"
 )
 
 func TestLocalListVersionsWithAgentPkg(t *testing.T) {

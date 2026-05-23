@@ -1,4 +1,4 @@
-module github.com/agentenv/agentenv
+module github.com/7emotions/agentenv
 
 go 1.22.5
 

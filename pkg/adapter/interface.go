@@ -5,7 +5,7 @@ package adapter
 import (
 	"context"
 
-	"github.com/agentenv/agentenv/pkg/types"
+	"github.com/7emotions/agentenv/pkg/types"
 )
 
 // AgentAdapter defines the interface for agent-specific operations

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/agentenv/agentenv/pkg/types"
+	"github.com/7emotions/agentenv/pkg/types"
 )
 
 func newTestAdapter(t *testing.T) (*ClaudeCodeAdapter, string) {
