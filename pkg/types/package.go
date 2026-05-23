@@ -35,6 +35,7 @@ type PackageDependency struct {
 	Name       string      `json:"name" yaml:"name"`
 	Type       PackageType `json:"type" yaml:"type"`
 	Constraint string      `json:"constraint" yaml:"constraint"` // semver constraint
+	Source     string      `json:"source,omitempty" yaml:"source,omitempty"`
 }
 
 // RuntimeRequirement describes a runtime prerequisite for a package.

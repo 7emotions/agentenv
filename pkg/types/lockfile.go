@@ -25,6 +25,7 @@ type LockedDep struct {
 	Name     string `json:"name" yaml:"name"`
 	Version  string `json:"version" yaml:"version"`
 	Resolved string `json:"resolved" yaml:"resolved"`
+	Source   string `json:"source,omitempty" yaml:"source,omitempty"`
 }
 
 // LockfileEnvSnapshot captures the package counts at lock time.

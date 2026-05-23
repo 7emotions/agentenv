@@ -80,6 +80,13 @@ func decodePkgDeps(node yaml.Node) ([]types.PackageDependency, error) {
 				dep.Type = types.PackageType(item.Content[j+1].Value)
 			case "constraint":
 				dep.Constraint = item.Content[j+1].Value
+			case "source":
+				dep.Source = item.Content[j+1].Value
+			}
+		}
+		if dep.Source != "" {
+			if _, err := types.ParseSourceURL(dep.Source); err != nil {
+				return nil, fmt.Errorf("line %d: invalid source %q: %w", item.Line, dep.Source, err)
 			}
 		}
 		result = append(result, dep)

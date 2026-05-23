@@ -408,6 +408,87 @@ source: invalid-scheme
 	}
 }
 
+func TestParseAgentPkgV2WithSource(t *testing.T) {
+	input := `
+name: my-agent
+version: "1.0.0"
+description: Agent with v2 source deps
+dependencies:
+  - name: dep-skill
+    type: skill
+    constraint: ">=1.0"
+    source: github:owner/repo-skill
+  - name: dep-mcp
+    type: mcp
+    constraint: "^2.0"
+    source: npm:@scope/pkg-name
+`
+	spec, err := ParseAgentPkg([]byte(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(spec.Dependencies) != 2 {
+		t.Fatalf("Dependencies len = %d, want 2", len(spec.Dependencies))
+	}
+	if spec.Dependencies[0].Source != "github:owner/repo-skill" {
+		t.Errorf("Dep[0].Source = %q, want %q", spec.Dependencies[0].Source, "github:owner/repo-skill")
+	}
+	if spec.Dependencies[1].Source != "npm:@scope/pkg-name" {
+		t.Errorf("Dep[1].Source = %q, want %q", spec.Dependencies[1].Source, "npm:@scope/pkg-name")
+	}
+}
+
+func TestParseAgentPkgV1BackwardCompat(t *testing.T) {
+	input := `
+name: my-agent
+version: "1.0.0"
+description: A test agent
+source: github:owner/repo
+dependencies:
+  - name: dep-skill
+    type: skill
+    constraint: ">=1.0"
+  - name: dep-mcp
+    type: mcp
+    constraint: "^2.0"
+config:
+  model: gpt-4
+  temperature: 0.7
+`
+	spec, err := ParseAgentPkg([]byte(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(spec.Dependencies) != 2 {
+		t.Fatalf("Dependencies len = %d, want 2", len(spec.Dependencies))
+	}
+	if spec.Dependencies[0].Source != "" {
+		t.Errorf("Dep[0].Source = %q, want empty (v1 backward compat)", spec.Dependencies[0].Source)
+	}
+	if spec.Dependencies[1].Source != "" {
+		t.Errorf("Dep[1].Source = %q, want empty (v1 backward compat)", spec.Dependencies[1].Source)
+	}
+}
+
+func TestParseAgentPkgInvalidSource(t *testing.T) {
+	input := `
+name: test
+version: "1.0"
+dependencies:
+  - name: bad-dep
+    type: skill
+    constraint: ">=1.0"
+    source: not-a-valid-scheme:thing
+`
+	_, err := ParseAgentPkg([]byte(input))
+	if err == nil {
+		t.Fatal("expected error for invalid dependency source")
+	}
+	if !strings.Contains(err.Error(), "source") {
+		t.Errorf("error should mention 'source': %v", err)
+	}
+}
+
 func TestVersionConstraints(t *testing.T) {
 	tests := []struct{ input, expected string }{
 		{`"^1.2.3"`, "^1.2.3"},
