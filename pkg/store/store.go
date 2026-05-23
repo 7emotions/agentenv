@@ -211,7 +211,7 @@ func (s *Store) ReferencedBy(pkgType, sourceSlug, version string) ([]string, err
 		pkgDir := filepath.Join(envsDir, envEntry.Name(), "packages")
 		_ = filepath.WalkDir(pkgDir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				return nil
+				return err
 			}
 			if d.IsDir() {
 				return nil

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -29,7 +30,7 @@ func NewCache(root string) (*Cache, error) {
 // Download fetches the resource at url and returns the path to the cached
 // file. If the URL has already been downloaded, the cached copy is returned
 // without making a network request.
-func (c *Cache) Download(url string) (string, error) {
+func (c *Cache) Download(ctx context.Context, url string) (string, error) {
 	h := sha256.Sum256([]byte(url))
 	key := hex.EncodeToString(h[:])
 	cachePath := filepath.Join(c.root, key)
@@ -38,7 +39,11 @@ func (c *Cache) Download(url string) (string, error) {
 		return cachePath, nil
 	}
 
-	resp, err := http.Get(url) //nolint:noctx
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("creating request: %w", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("download %s: %w", url, err)
 	}

@@ -47,22 +47,22 @@ changelog:
 
 release:
   github:
-    owner: agentenv
+    owner: 7emotions
     name: agentenv
   header: |
     ## agentenv {{ .Version }}
 
-    Release of agentenv {{ .Version }}. See the [changelog](https://github.com/agentenv/agentenv/releases/tag/{{ .Tag }}) for details.
+    Release of agentenv {{ .Version }}. See the [changelog](https://github.com/7emotions/agentenv/releases/tag/{{ .Tag }}) for details.
 
 brews:
   - name: agentenv
     repository:
-      owner: agentenv
+      owner: 7emotions
       name: homebrew-agentenv
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
-    homepage: "https://github.com/agentenv/agentenv"
+    homepage: "https://github.com/7emotions/agentenv"
     description: "AI agent environment management CLI"
     license: "MIT"
     install: |

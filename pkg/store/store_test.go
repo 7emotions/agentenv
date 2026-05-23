@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -522,7 +523,7 @@ func TestCache_Download(t *testing.T) {
 		t.Fatalf("NewCache: %v", err)
 	}
 
-	path, err := c.Download(srv.URL)
+	path, err := c.Download(context.Background(), srv.URL)
 	if err != nil {
 		t.Fatalf("Download: %v", err)
 	}
@@ -547,7 +548,7 @@ func TestCache_Download_Cached(t *testing.T) {
 		t.Fatalf("NewCache: %v", err)
 	}
 
-	path1, err := c.Download(srv.URL)
+	path1, err := c.Download(context.Background(), srv.URL)
 	if err != nil {
 		t.Fatalf("first Download: %v", err)
 	}
@@ -558,7 +559,7 @@ func TestCache_Download_Cached(t *testing.T) {
 		t.Fatalf("tamper: %v", err)
 	}
 
-	path2, err := c.Download(srv.URL)
+	path2, err := c.Download(context.Background(), srv.URL)
 	if err != nil {
 		t.Fatalf("second Download: %v", err)
 	}
@@ -583,7 +584,7 @@ func TestCache_Download_HTTPError(t *testing.T) {
 		t.Fatalf("NewCache: %v", err)
 	}
 
-	_, err = c.Download(srv.URL)
+	_, err = c.Download(context.Background(), srv.URL)
 	if err == nil {
 		t.Fatal("expected error for 404")
 	}
@@ -595,9 +596,43 @@ func TestCache_Download_InvalidURL(t *testing.T) {
 		t.Fatalf("NewCache: %v", err)
 	}
 
-	_, err = c.Download("http://\x01.invalid")
+	_, err = c.Download(context.Background(), "http://\x01.invalid")
 	if err == nil {
 		t.Fatal("expected error for invalid URL")
+	}
+}
+
+func TestReferencedBy_WalkError(t *testing.T) {
+	s, root := newTestStore(t)
+
+	_, err := s.Put("skill", "gh_a", "1.0.0", []byte("a"))
+	if err != nil {
+		t.Fatalf("Put: %v", err)
+	}
+
+	envPath := filepath.Join(root, "envs", "myenv")
+	os.MkdirAll(envPath, 0o755)
+
+	if err := s.Link(envPath, "skill", "my-skill", "gh_a", "1.0.0"); err != nil {
+		t.Fatalf("Link: %v", err)
+	}
+
+	// Create an unreadable subdirectory to trigger WalkDir error during ReferencedBy.
+	// Name it so it sorts after the valid symlink to ensure the ref is found first.
+	badDir := filepath.Join(envPath, "packages", "skill", "z_unreadable")
+	os.MkdirAll(badDir, 0o000)
+	defer os.Chmod(badDir, 0o755) // restore so temp dir cleanup works
+
+	// ReferencedBy should still find the valid symlink (visited before error)
+	refs, err := s.ReferencedBy("skill", "gh_a", "1.0.0")
+	if err != nil {
+		t.Fatalf("ReferencedBy: %v", err)
+	}
+	if len(refs) != 1 {
+		t.Errorf("expected 1 ref (myenv), got %d: %v", len(refs), refs)
+	}
+	if len(refs) > 0 && refs[0] != "myenv" {
+		t.Errorf("expected ref 'myenv', got %q", refs[0])
 	}
 }
 
