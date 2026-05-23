@@ -1,11 +1,12 @@
 module github.com/7emotions/agentenv
 
-go 1.22.5
+go 1.23
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/spf13/cobra v1.10.2
+	github.com/tailscale/hujson v0.0.0-20260302212456-ecc657c15afd
 	gopkg.in/yaml.v3 v3.0.1
 )
 
