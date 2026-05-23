@@ -221,12 +221,22 @@ func (r *PubGrubResolver) Resolve(ctx context.Context, requests []PackageRequest
 		// Try to extract a NoSolutionError for detailed messaging.
 		var noSolErr *pubgrub.NoSolutionError
 		if errors.As(err, &noSolErr) {
-			return nil, fmt.Errorf("%s", noSolErr.Error())
+			return nil, wrapNoSolutionError(noSolErr)
 		}
 		return nil, fmt.Errorf("resolution failed: %w", err)
 	}
 
 	// ---------- Phase 3: Convert solution to ResolvedPackage slice ----------
+	// Two-pass: collect packages and parent relationships from manifests,
+	// then assign ResolvedBy.
+
+	type pkgBuild struct {
+		rp   ResolvedPackage
+		deps []ResolvedDep
+	}
+
+	buildMap := make(map[string]*pkgBuild)
+	parentOf := make(map[string]string)
 
 	seenTypes := make(map[string]map[string]bool)
 
@@ -252,12 +262,10 @@ func (r *PubGrubResolver) Resolve(ctx context.Context, requests []PackageRequest
 		req, isRoot := requestMap[encoded]
 		sourceStr := depFn(pkgName, pkgType)
 		constraint := "*"
-		resolvedBy := findParent(encoded, solution, requestMap, depFn)
 
 		if isRoot {
 			sourceStr = req.Source
 			constraint = req.Constraint
-			resolvedBy = "(root)"
 		}
 
 		// Fetch the package archive to obtain SHA-256 and manifest.
@@ -282,16 +290,15 @@ func (r *PubGrubResolver) Resolve(ctx context.Context, requests []PackageRequest
 		}
 
 		rp := ResolvedPackage{
-			Name:       pkgName,
-			Type:       pkgType,
-			Source:     sourceStr,
-			Version:    constraint,
-			Resolved:   nv.Version.String(),
-			SHA256:     sha256,
-			ResolvedBy: resolvedBy,
+			Name:     pkgName,
+			Type:     pkgType,
+			Source:   sourceStr,
+			Version:  constraint,
+			Resolved: nv.Version.String(),
+			SHA256:   sha256,
 		}
 
-		// Populate dependency metadata from the manifest.
+		var deps []ResolvedDep
 		if spec != nil {
 			for _, dep := range spec.Dependencies {
 				depConstraint := dep.Constraint
@@ -304,12 +311,16 @@ func (r *PubGrubResolver) Resolve(ctx context.Context, requests []PackageRequest
 				}
 
 				depEncoded := EncodeName(string(dep.Type), dep.Name)
+				if _, already := parentOf[depEncoded]; !already {
+					parentOf[depEncoded] = pkgName
+				}
+
 				depResolved := ""
 				if dv, found := solution.GetVersion(pubgrub.MakeName(depEncoded)); found {
 					depResolved = dv.String()
 				}
 
-				rp.Dependencies = append(rp.Dependencies, ResolvedDep{
+				deps = append(deps, ResolvedDep{
 					Name:     dep.Name,
 					Type:     string(dep.Type),
 					Version:  depConstraint,
@@ -319,7 +330,19 @@ func (r *PubGrubResolver) Resolve(ctx context.Context, requests []PackageRequest
 			}
 		}
 
-		result.Packages = append(result.Packages, rp)
+		buildMap[encoded] = &pkgBuild{rp: rp, deps: deps}
+	}
+
+	// Second pass: assign ResolvedBy using the parentOf map built above.
+	for encoded, build := range buildMap {
+		_, isRoot := requestMap[encoded]
+		if isRoot {
+			build.rp.ResolvedBy = "(root)"
+		} else if parent, ok := parentOf[encoded]; ok {
+			build.rp.ResolvedBy = parent
+		}
+		build.rp.Dependencies = build.deps
+		result.Packages = append(result.Packages, build.rp)
 	}
 
 	// Add name-collision warnings.
@@ -610,69 +633,6 @@ func expandTilde(v string) string {
 	// For semver ~X.Y.Z means >=X.Y.Z and <X.(Y+1).0
 	nextMinor := minor + 1
 	return fmt.Sprintf(">=%s, <%d.%d.0", v, major, nextMinor)
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-// findParent walks the solution to determine which package depends on the
-// given encoded name. Returns "(root)" for root packages, or a parent
-// identifier (package name) for transitive dependencies.
-func findParent(encoded string, solution pubgrub.Solution, requestMap map[string]PackageRequest, depFn func(string, string) string) string {
-	// If it's a root package, the parent is "(root)".
-	if _, ok := requestMap[encoded]; ok {
-		return "(root)"
-	}
-
-	// Decode just for the depFn call.
-	pkgType, pkgName, err := DecodeName(encoded)
-	if err != nil {
-		return ""
-	}
-
-	// Search through all solution packages for one whose dependencies
-	// include the given encoded name.
-	for _, nv := range solution {
-		parentEncoded := nv.Name.Value()
-		if parentEncoded == encoded || strings.HasPrefix(parentEncoded, "$$") {
-			continue
-		}
-
-		// Get the manifest for this candidate parent.
-		parentSrc := depFn(pkgName, pkgType)
-		// Derive parent's own source via depSource.
-		pt, pn, _ := DecodeName(parentEncoded)
-		parentSrc = depFn(pn, pt)
-
-		srcURL, pErr := types.ParseSourceURL(parentSrc)
-		if pErr != nil {
-			continue
-		}
-		h, hErr := source.GetHandler(srcURL.Scheme)
-		if hErr != nil {
-			continue
-		}
-		data, _, fErr := h.Fetch(srcURL, nv.Version.String())
-		if fErr != nil {
-			continue
-		}
-		manifestData, mErr := extractManifestFromTarGz(data)
-		if mErr != nil {
-			continue
-		}
-		spec, _ := parser.ParseAgentPkg(manifestData)
-		if spec == nil {
-			continue
-		}
-		for _, dep := range spec.Dependencies {
-			depEncoded := EncodeName(string(dep.Type), dep.Name)
-			if depEncoded == encoded {
-				return pn
-			}
-		}
-	}
-	return ""
 }
 
 // Compile-time check that PubGrubResolver satisfies the DependencyResolver interface.

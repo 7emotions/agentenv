@@ -649,7 +649,7 @@ Max Concurrent: 5 (Waves 1, 3)
   - Message: `feat(resolver): PubGrubResolver.Resolve implementation (GREEN)`
   - Files: `pkg/resolver/pubgrub_resolver.go`
 
-- [ ] 17. 冲突报告包装
+- [x] 17. 冲突报告包装
 
   **What to do**:
   - pubgrub 的 `NoSolutionError` → agentenv 错误格式
@@ -675,7 +675,7 @@ Max Concurrent: 5 (Waves 1, 3)
 
   **Commit**: YES — `feat(resolver): wrap pubgrub errors in agentenv format` — `pkg/resolver/pubgrub_err.go`
 
-- [ ] 18. 适配器获取 + manifest 提取集成
+- [x] 18. 适配器获取 + manifest 提取集成
 
   **What to do**:
   - 验证 Task 5 的适配器在真实的 `SourceHandler`（github/npm/local/git/file/url）下工作
@@ -702,7 +702,7 @@ Max Concurrent: 5 (Waves 1, 3)
 
   **Commit**: YES — `test(resolver): adapter integration with real source handlers` — `pkg/resolver/pubgrub_adapter_test.go`
 
-- [ ] 19. 回填 resolved_by 到 Lockfile v3
+- [x] 19. 回填 resolved_by 到 Lockfile v3
 
   **What to do**:
   - PubGrubResolver 的 Solution → 提取解析路径 → 填充每个 LockedPackage.ResolvedBy

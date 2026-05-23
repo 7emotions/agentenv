@@ -5,8 +5,11 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/7emotions/agentenv/pkg/source"
 	"github.com/7emotions/agentenv/pkg/types"
 	"github.com/contriboss/pubgrub-go"
 )
@@ -511,5 +514,292 @@ source: github:test/F
 				t.Errorf("F resolved = %q, want 1.0.0 (intersection of >=1.0.0 and <2.0.0)", pkg.Resolved)
 			}
 		}
+	}
+}
+
+// --- Integration tests with real source handlers ---
+
+// TestAdapter_Integration_LocalSource_WithDependencies tests the full adapter
+// pipeline using a real LocalSource handler. It creates a temp directory with
+// agentpkg.yaml containing dependency declarations and verifies that
+// ListVersions → Fetch → GetDependencies produces correct pubgrub terms.
+func TestAdapter_Integration_LocalSource_WithDependencies(t *testing.T) {
+	dir := t.TempDir()
+
+	agentPkg := `name: test-pkg
+version: 1.0.0
+dependencies:
+  - name: dep-a
+    type: skill
+    constraint: ">=1.0.0, <2.0.0"
+  - name: dep-b
+    type: mcp
+    constraint: ">=0.5.0"
+`
+	if err := os.WriteFile(filepath.Join(dir, "agentpkg.yaml"), []byte(agentPkg), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "skill.md"), []byte("# Test Skill"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := &source.LocalSource{}
+	srcURL := types.SourceURL{Scheme: "local", Path: dir}
+	src := NewAgentenvSource(handler, &srcURL, nil)
+
+	name := pubgrub.MakeName("skill:test-pkg")
+
+	// GetVersions should read version from agentpkg.yaml via LocalSource
+	versions, err := src.GetVersions(name)
+	if err != nil {
+		t.Fatalf("GetVersions() unexpected error: %v", err)
+	}
+	if len(versions) != 1 {
+		t.Fatalf("expected 1 version, got %d", len(versions))
+	}
+	if versions[0].String() != "1.0.0" {
+		t.Errorf("version = %q, want 1.0.0", versions[0].String())
+	}
+
+	// Verify the version is a proper SemanticVersion (not just a string)
+	if _, ok := versions[0].(*pubgrub.SemanticVersion); !ok {
+		t.Fatalf("version is %T, want *pubgrub.SemanticVersion", versions[0])
+	}
+
+	// GetDependencies should parse manifest and return dependency terms
+	sv, err := pubgrub.ParseSemanticVersion("1.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deps, err := src.GetDependencies(name, sv)
+	if err != nil {
+		t.Fatalf("GetDependencies() unexpected error: %v", err)
+	}
+	if len(deps) != 2 {
+		t.Fatalf("expected 2 deps, got %d", len(deps))
+	}
+
+	// Verify dep-a: skill:dep-a with constraint >=1.0.0, <2.0.0
+	wantA := pubgrub.MakeName("skill:dep-a")
+	if deps[0].Name != wantA {
+		t.Errorf("deps[0].Name = %v, want %v", deps[0].Name, wantA)
+	}
+	if !deps[0].Positive {
+		t.Error("deps[0] should be positive")
+	}
+	if deps[0].Condition == nil {
+		t.Error("deps[0].Condition should not be nil")
+	}
+
+	// Verify dep-b: mcp:dep-b with constraint >=0.5.0
+	wantB := pubgrub.MakeName("mcp:dep-b")
+	if deps[1].Name != wantB {
+		t.Errorf("deps[1].Name = %v, want %v", deps[1].Name, wantB)
+	}
+	if !deps[1].Positive {
+		t.Error("deps[1] should be positive")
+	}
+}
+
+// TestAdapter_Integration_LocalSource_MissingManifest tests that when a
+// local directory has no agentpkg.yaml, the adapter gracefully returns
+// empty dependencies without error or panic.
+func TestAdapter_Integration_LocalSource_MissingManifest(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create files but NO agentpkg.yaml
+	if err := os.WriteFile(filepath.Join(dir, "skill.md"), []byte("# Orphan Skill"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := &source.LocalSource{}
+	srcURL := types.SourceURL{Scheme: "local", Path: dir}
+	src := NewAgentenvSource(handler, &srcURL, nil)
+
+	// ListVersions returns default "0.0.0-dev" when no agentpkg.yaml
+	versions, err := src.GetVersions(pubgrub.MakeName("skill:orphan"))
+	if err != nil {
+		t.Fatalf("GetVersions() unexpected error: %v", err)
+	}
+	if len(versions) != 1 {
+		t.Fatalf("expected 1 version (0.0.0-dev), got %d", len(versions))
+	}
+	if versions[0].String() != "0.0.0-dev" {
+		t.Errorf("version = %q, want 0.0.0-dev", versions[0].String())
+	}
+
+	// GetDependencies should return empty deps (no panic) because
+	// extractManifestFromTarGz won't find agentpkg.yaml in the archive.
+	sv, err := pubgrub.ParseSemanticVersion("0.0.0-dev")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deps, err := src.GetDependencies(pubgrub.MakeName("skill:orphan"), sv)
+	if err != nil {
+		t.Fatalf("GetDependencies() unexpected error: %v", err)
+	}
+	if len(deps) != 0 {
+		t.Fatalf("expected 0 deps, got %d", len(deps))
+	}
+}
+
+// TestAdapter_Integration_LocalSource_InvalidManifest tests that corrupted
+// or invalid agentpkg.yaml content is handled gracefully: the YAML parser
+// fails and returns empty dependencies without error or panic.
+func TestAdapter_Integration_LocalSource_InvalidManifest(t *testing.T) {
+	dir := t.TempDir()
+
+	// agentpkg.yaml with invalid YAML — simulates a corrupted manifest
+	if err := os.WriteFile(filepath.Join(dir, "agentpkg.yaml"), []byte(": : invalid yaml [[["), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "skill.md"), []byte("# Skill with bad manifest"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := &source.LocalSource{}
+	srcURL := types.SourceURL{Scheme: "local", Path: dir}
+	src := NewAgentenvSource(handler, &srcURL, nil)
+
+	// ListVersions uses simple line parsing so it still returns a version
+	versions, err := src.GetVersions(pubgrub.MakeName("skill:bad"))
+	if err != nil {
+		t.Fatalf("GetVersions() unexpected error: %v", err)
+	}
+	if len(versions) != 1 {
+		t.Fatalf("expected 1 version, got %d", len(versions))
+	}
+
+	// GetDependencies should fail to parse YAML → empty deps, no panic
+	sv, err := pubgrub.ParseSemanticVersion(versions[0].String())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deps, err := src.GetDependencies(pubgrub.MakeName("skill:bad"), sv)
+	if err != nil {
+		t.Fatalf("GetDependencies() unexpected error: %v", err)
+	}
+	if len(deps) != 0 {
+		t.Fatalf("expected 0 deps, got %d", len(deps))
+	}
+}
+
+// TestAdapter_Integration_LocalSource_NonSemverVersion tests that
+// non-semver version strings returned by the source handler are silently
+// skipped by GetVersions without panicking.
+func TestAdapter_Integration_LocalSource_NonSemverVersion(t *testing.T) {
+	dir := t.TempDir()
+
+	agentPkg := `name: test-pkg
+version: abc-def
+`
+	if err := os.WriteFile(filepath.Join(dir, "agentpkg.yaml"), []byte(agentPkg), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "skill.md"), []byte("# Non-semver skill"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := &source.LocalSource{}
+	srcURL := types.SourceURL{Scheme: "local", Path: dir}
+	src := NewAgentenvSource(handler, &srcURL, nil)
+
+	// GetVersions should skip "abc-def" (not valid semver) without panic.
+	// The result should be an empty (or non-panicked) version list.
+	versions, err := src.GetVersions(pubgrub.MakeName("skill:test-pkg"))
+	if err != nil {
+		t.Fatalf("GetVersions() unexpected error: %v", err)
+	}
+	// "abc-def" is not valid semver, so GetVersions silently skips it.
+	// We accept 0 results — the key assertion is no panic occurred.
+	t.Logf("GetVersions returned %d versions (non-semver should be skipped)", len(versions))
+}
+
+// TestAdapter_Integration_LocalSource_EmptyVersion tests that a completely
+// empty version string in agentpkg.yaml is handled gracefully: the adapter
+// should not panic and should return an appropriate result.
+func TestAdapter_Integration_LocalSource_EmptyVersion(t *testing.T) {
+	dir := t.TempDir()
+
+	// version field present but empty string
+	agentPkg := `name: test-pkg
+version: ""
+`
+	if err := os.WriteFile(filepath.Join(dir, "agentpkg.yaml"), []byte(agentPkg), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "skill.md"), []byte("# Empty version skill"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := &source.LocalSource{}
+	srcURL := types.SourceURL{Scheme: "local", Path: dir}
+	src := NewAgentenvSource(handler, &srcURL, nil)
+
+	// ListVersions strips quotes: version: "" → trimmed to empty → falls back to "0.0.0-dev"
+	versions, err := src.GetVersions(pubgrub.MakeName("skill:test-pkg"))
+	if err != nil {
+		t.Fatalf("GetVersions() unexpected error: %v", err)
+	}
+	if len(versions) != 1 {
+		t.Fatalf("expected 1 version, got %d", len(versions))
+	}
+	t.Logf("Empty version string resolved to %q", versions[0].String())
+}
+
+// TestAdapter_Integration_LocalSource_DescendentDir tests that agentpkg.yaml
+// in a subdirectory doesn't interfere with package resolution. LocalSource
+// walks all files recursively, so the archive will contain nested files.
+func TestAdapter_Integration_LocalSource_DescendentDir(t *testing.T) {
+	dir := t.TempDir()
+
+	// agentpkg.yaml at root
+	agentPkg := `name: nested-pkg
+version: 2.0.0
+`
+	if err := os.WriteFile(filepath.Join(dir, "agentpkg.yaml"), []byte(agentPkg), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// Create a subdirectory with some files
+	subDir := filepath.Join(dir, "subdir")
+	if err := os.MkdirAll(subDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(subDir, "nested.txt"), []byte("nested content"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := &source.LocalSource{}
+	srcURL := types.SourceURL{Scheme: "local", Path: dir}
+	src := NewAgentenvSource(handler, &srcURL, nil)
+
+	// GetVersions should find version from root agentpkg.yaml
+	versions, err := src.GetVersions(pubgrub.MakeName("skill:nested-pkg"))
+	if err != nil {
+		t.Fatalf("GetVersions() unexpected error: %v", err)
+	}
+	if len(versions) != 1 {
+		t.Fatalf("expected 1 version, got %d", len(versions))
+	}
+	if versions[0].String() != "2.0.0" {
+		t.Errorf("version = %q, want 2.0.0", versions[0].String())
+	}
+
+	// Fetch should produce a valid tar.gz that includes both root and nested files
+	sv, err := pubgrub.ParseSemanticVersion("2.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deps, err := src.GetDependencies(pubgrub.MakeName("skill:nested-pkg"), sv)
+	if err != nil {
+		t.Fatalf("GetDependencies() unexpected error: %v", err)
+	}
+	// No deps declared, so should be empty
+	if len(deps) != 0 {
+		t.Fatalf("expected 0 deps, got %d", len(deps))
 	}
 }

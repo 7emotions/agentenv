@@ -118,3 +118,65 @@ func TestPubGrubUnsatisfiable(t *testing.T) {
 		t.Errorf("error should mention version satisfaction issue, got: %v", err)
 	}
 }
+
+func TestPubGrubResolvedBy(t *testing.T) {
+	// Verify ResolvedBy is correct for a 3-deep transitive chain:
+	//   root → A (ResolvedBy: "(root)")
+	//   root → A → B (ResolvedBy: "A")
+	//   root → A → B → C (ResolvedBy: "B")
+
+	m := &mockSource{
+		versions: map[string][]string{
+			"github:test/A": {"1.0.0"},
+			"github:test/B": {"1.0.0"},
+			"github:test/C": {"1.0.0"},
+		},
+		pkgs: map[string][]byte{
+			"github:test/A": makeAgentPkg("A", "1.0.0", "B@^1.0"),
+			"github:test/B": makeAgentPkg("B", "1.0.0", "C@^1.0"),
+			"github:test/C": makeAgentPkg("C", "1.0.0"),
+		},
+	}
+
+	r := NewPubGrubResolver()
+	r.RegisterHandler("github", m)
+
+	result, err := r.Resolve(context.Background(), []PackageRequest{
+		req("A", "github:test/A", "^1.0"),
+	}, DefaultResolveOptions())
+
+	if err != nil {
+		t.Fatalf("Resolve() unexpected error: %v", err)
+	}
+
+	pkgBy := make(map[string]ResolvedPackage)
+	for _, pkg := range result.Packages {
+		pkgBy[pkg.Name] = pkg
+	}
+
+	// Root package A → ResolvedBy = "(root)"
+	if pkgA, ok := pkgBy["A"]; !ok {
+		t.Fatal("expected package A in result")
+	} else if pkgA.ResolvedBy != "(root)" {
+		t.Errorf("A.ResolvedBy = %q, want %q", pkgA.ResolvedBy, "(root)")
+	}
+
+	// Transitive B (depended on by A) → ResolvedBy = "A"
+	if pkgB, ok := pkgBy["B"]; !ok {
+		t.Fatal("expected package B in result")
+	} else if pkgB.ResolvedBy != "A" {
+		t.Errorf("B.ResolvedBy = %q, want %q", pkgB.ResolvedBy, "A")
+	}
+
+	// Transitive C (depended on by B) → ResolvedBy = "B"
+	if pkgC, ok := pkgBy["C"]; !ok {
+		t.Fatal("expected package C in result")
+	} else if pkgC.ResolvedBy != "B" {
+		t.Errorf("C.ResolvedBy = %q, want %q", pkgC.ResolvedBy, "B")
+	}
+
+	if len(result.Packages) != 3 {
+		t.Errorf("expected 3 packages, got %d", len(result.Packages))
+	}
+}
+
