@@ -87,8 +87,7 @@ func runLock(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	r := resolver.NewResolver()
-	r.DepSource = depSource
+	r := resolver.NewPubGrubResolver(resolver.WithDepSource(depSource))
 
 	opts := resolver.ResolveOptions{
 		MaxDepth:    3,

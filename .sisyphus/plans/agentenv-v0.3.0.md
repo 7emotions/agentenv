@@ -729,7 +729,7 @@ Max Concurrent: 5 (Waves 1, 3)
 
   **Commit**: YES — `feat(resolver): backfill resolved_by from PubGrub solution path` — `pkg/resolver/pubgrub_resolver.go`
 
-- [ ] 20. 构造函数切换
+- [x] 20. 构造函数切换
 
   **What to do**:
   - `cmd/agentenv/lock.go:90-91`: `resolver.NewResolver()` → `resolver.NewPubGrubResolver(resolver.WithDepSource(depSource))`

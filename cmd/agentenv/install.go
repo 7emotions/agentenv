@@ -180,8 +180,7 @@ func resolveInstallPackages(envDir string) ([]types.LockedPackage, error) {
 		return nil, nil
 	}
 
-	r := resolver.NewResolver()
-	r.DepSource = depSource
+	r := resolver.NewPubGrubResolver(resolver.WithDepSource(depSource))
 
 	result, err := r.Resolve(context.Background(), requests, resolver.ResolveOptions{
 		MaxDepth:    3,
