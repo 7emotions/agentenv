@@ -272,7 +272,7 @@ Max Concurrent: 5 (Waves 1, 3)
   - Message: `feat(resolver): namespace encoding for PubGrub flat name space`
   - Files: `pkg/resolver/namespace.go`, `pkg/resolver/namespace_test.go`
 
-- [ ] 3. PubGrubResolver 构造函数 + 配置选项
+- [x] 3. PubGrubResolver 构造函数 + 配置选项
 
   **What to do**:
   - 创建 `pkg/resolver/pubgrub_resolver.go`
@@ -324,7 +324,7 @@ Max Concurrent: 5 (Waves 1, 3)
   - Message: `feat(resolver): PubGrubResolver constructor with options pattern`
   - Files: `pkg/resolver/pubgrub_resolver.go`
 
-- [ ] 4. SourceHandler → pubgrub Source 适配器骨架
+- [x] 4. SourceHandler → pubgrub Source 适配器骨架
 
   **What to do**:
   - 创建 `pkg/resolver/pubgrub_adapter.go`
