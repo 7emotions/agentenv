@@ -607,7 +607,7 @@ Max Concurrent: 5 (Waves 1, 3)
   **Evidence**: `.sisyphus/evidence/task-15-latest-red.txt`
   **Commit**: YES — `test(resolver): TDD latest/* constraint test`
 
-- [ ] 16. PubGrubResolver.Resolve 核心实现 (GREEN)
+- [x] 16. PubGrubResolver.Resolve 核心实现 (GREEN)
 
   **What to do**:
   - 实现 `PubGrubResolver.Resolve()`:

@@ -18,9 +18,8 @@ func TestPubGrubSimpleGraph(t *testing.T) {
 			"github:test/B": makeAgentPkg("B", "2.1.0"),
 		},
 	}
-	_ = m
-
 	r := NewPubGrubResolver()
+	r.RegisterHandler("github", m)
 
 	result, err := r.Resolve(context.Background(), []PackageRequest{
 		req("A", "github:test/A", "^1.0"),
@@ -88,15 +87,24 @@ func TestPubGrubSimpleGraph(t *testing.T) {
 }
 
 func TestPubGrubUnsatisfiable(t *testing.T) {
-	// Set up a PubGrubResolver. Currently Resolve() returns
-	// "not yet implemented", so this test is expected to FAIL (RED).
-	r := NewPubGrubResolver()
-
 	// Scenario:
 	// - Root depends on A@^1.0
 	// - A@1.0 depends on B@>=2.0
 	// - B only has version 1.0.0  (no version satisfies >=2.0)
 	// Expected: Resolve fails because constraint is unsatisfiable.
+
+	m := &mockSource{
+		versions: map[string][]string{
+			"github:test/A": {"1.0.0"},
+			"github:test/B": {"1.0.0"},
+		},
+		pkgs: map[string][]byte{
+			"github:test/A": makeAgentPkg("A", "1.0.0", "B@>=2.0"),
+		},
+	}
+
+	r := NewPubGrubResolver()
+	r.RegisterHandler("github", m)
 
 	_, err := r.Resolve(context.Background(), []PackageRequest{
 		req("A", "github:test/A", "^1.0.0"),
@@ -105,7 +113,8 @@ func TestPubGrubUnsatisfiable(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected unsatisfiable constraint error, got nil")
 	}
-	if !strings.Contains(err.Error(), "no version satisfies") {
-		t.Errorf("error should mention 'no version satisfies', got: %v", err)
+	if !strings.Contains(err.Error(), "no version satisfies") &&
+		!strings.Contains(err.Error(), "No versions of") {
+		t.Errorf("error should mention version satisfaction issue, got: %v", err)
 	}
 }

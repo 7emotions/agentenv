@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/7emotions/agentenv/pkg/types"
@@ -29,14 +28,9 @@ func TestPubGrubLatest(t *testing.T) {
 		handler := &mockLatestHandler{
 			versions: []string{},
 		}
-		_ = handler
 
 		resolver := NewPubGrubResolver()
-		srcURL, err := types.ParseSourceURL("github:test/no-tags")
-		if err != nil {
-			t.Fatalf("ParseSourceURL() error: %v", err)
-		}
-		_ = srcURL
+		resolver.RegisterHandler("github", handler)
 
 		result, err := resolver.Resolve(context.Background(), []PackageRequest{
 			{
@@ -48,10 +42,6 @@ func TestPubGrubLatest(t *testing.T) {
 		}, DefaultResolveOptions())
 
 		if err != nil {
-			if strings.Contains(err.Error(), "not yet implemented") {
-				t.Logf("Expected RED: Resolve() returned: %v", err)
-				t.FailNow()
-			}
 			t.Fatalf("Resolve() unexpected error: %v", err)
 		}
 
@@ -67,9 +57,9 @@ func TestPubGrubLatest(t *testing.T) {
 		handler := &mockLatestHandler{
 			versions: []string{"1.0.0", "2.0.0"},
 		}
-		_ = handler
 
 		resolver := NewPubGrubResolver()
+		resolver.RegisterHandler("github", handler)
 
 		result, err := resolver.Resolve(context.Background(), []PackageRequest{
 			{
@@ -81,10 +71,6 @@ func TestPubGrubLatest(t *testing.T) {
 		}, DefaultResolveOptions())
 
 		if err != nil {
-			if strings.Contains(err.Error(), "not yet implemented") {
-				t.Logf("Expected RED: Resolve() returned: %v", err)
-				t.FailNow()
-			}
 			t.Fatalf("Resolve() unexpected error: %v", err)
 		}
 

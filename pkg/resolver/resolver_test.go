@@ -624,6 +624,7 @@ func TestPubGrubDiamondConflict(t *testing.T) {
 	}
 
 	r := NewPubGrubResolver()
+	r.RegisterHandler("github", m)
 	_, err := r.Resolve(context.Background(), []PackageRequest{
 		req("A", "github:test/A", "^1.0"),
 		req("C", "github:test/C", "^1.0"),
@@ -634,15 +635,14 @@ func TestPubGrubDiamondConflict(t *testing.T) {
 	}
 
 	// PubGrub's default conflict chain should mention all three packages involved.
-	if !strings.Contains(err.Error(), "A") {
+	errMsg := err.Error()
+	if !strings.Contains(errMsg, "A") {
 		t.Error("error should mention 'A'")
 	}
-	if !strings.Contains(err.Error(), "C") {
+	if !strings.Contains(errMsg, "C") {
 		t.Error("error should mention 'C'")
 	}
-	if !strings.Contains(err.Error(), "B") {
+	if !strings.Contains(errMsg, "B") {
 		t.Error("error should mention 'B'")
 	}
-
-	_ = m // mock setup for GREEN phase when PubGrubResolver uses it
 }

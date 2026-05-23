@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/7emotions/agentenv/pkg/types"
@@ -417,44 +416,41 @@ type mockError struct{ msg string }
 func (e *mockError) Error() string { return e.msg }
 
 func TestPubGrubDeepConflict(t *testing.T) {
-	hashAs := map[string]*mockAdapterHandler{}
-
-	addHandler := func(name string, versions []string, deps string) {
-		h := &mockAdapterHandler{versions: versions}
-		if deps != "" {
-			h.fetchData = makeTarGz(t, deps)
-		}
-		hashAs[name] = h
-	}
-
-	addHandler("A", []string{"1.0.0"}, `name: A
+	m := &mockSource{
+		versions: map[string][]string{
+			"github:test/A": {"1.0.0"},
+			"github:test/B": {"1.0.0"},
+			"github:test/C": {"1.0.0"},
+			"github:test/D": {"1.0.0"},
+			"github:test/E": {"1.0.0"},
+			"github:test/F": {"1.0.0", "2.0.0"},
+		},
+		pkgs: map[string][]byte{
+			"github:test/A": makeTarGz(t, `name: A
 version: "1.0.0"
 source: github:test/A
 dependencies:
   - name: B
     type: skill
     constraint: "^1.0.0"
-`)
-
-	addHandler("B", []string{"1.0.0"}, `name: B
+`),
+			"github:test/B": makeTarGz(t, `name: B
 version: "1.0.0"
 source: github:test/B
 dependencies:
   - name: C
     type: skill
     constraint: "^1.0.0"
-`)
-
-	addHandler("C", []string{"1.0.0"}, `name: C
+`),
+			"github:test/C": makeTarGz(t, `name: C
 version: "1.0.0"
 source: github:test/C
 dependencies:
   - name: D
     type: skill
     constraint: "^1.0.0"
-`)
-
-	addHandler("D", []string{"1.0.0"}, `name: D
+`),
+			"github:test/D": makeTarGz(t, `name: D
 version: "1.0.0"
 source: github:test/D
 dependencies:
@@ -464,25 +460,24 @@ dependencies:
   - name: F
     type: skill
     constraint: ">=1.0.0"
-`)
-
-	addHandler("E", []string{"1.0.0"}, `name: E
+`),
+			"github:test/E": makeTarGz(t, `name: E
 version: "1.0.0"
 source: github:test/E
 dependencies:
   - name: F
     type: skill
     constraint: "<2.0.0"
-`)
-
-	addHandler("F", []string{"1.0.0", "2.0.0"}, `name: F
+`),
+			"github:test/F": makeTarGz(t, `name: F
 version: "2.0.0"
 source: github:test/F
-`)
-
-	_ = hashAs
+`),
+		},
+	}
 
 	resolver := NewPubGrubResolver(WithMaxSteps(200))
+	resolver.RegisterHandler("github", m)
 
 	requests := []PackageRequest{
 		{Name: "A", Type: "skill", Source: "github:test/A", Constraint: "^1.0.0"},
@@ -492,9 +487,6 @@ source: github:test/F
 	result, err := resolver.Resolve(ctx, requests, DefaultResolveOptions())
 
 	if err != nil {
-		if strings.Contains(err.Error(), "not yet implemented") {
-			t.Fatal("RED: PubGrubResolver.Resolve not yet implemented — expected successful resolution")
-		}
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if result == nil {
