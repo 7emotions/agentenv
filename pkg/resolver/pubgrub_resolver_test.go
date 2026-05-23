@@ -180,3 +180,168 @@ func TestPubGrubResolvedBy(t *testing.T) {
 	}
 }
 
+func TestPubGrubEdgeCases(t *testing.T) {
+	// --- Cancel: pre-canceled context → Resolve stops immediately ---
+	t.Run("Cancel", func(t *testing.T) {
+		m := &mockSource{
+			versions: map[string][]string{
+				"github:test/A": {"1.0.0"},
+			},
+			pkgs: map[string][]byte{
+				"github:test/A": makeAgentPkg("A", "1.0.0"),
+			},
+		}
+		r := NewPubGrubResolver()
+		r.RegisterHandler("github", m)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_, err := r.Resolve(ctx, []PackageRequest{
+			req("A", "github:test/A", "^1.0"),
+		}, DefaultResolveOptions())
+
+		if err == nil {
+			t.Fatal("expected context cancellation error, got nil")
+		}
+		if !strings.Contains(err.Error(), "canceled") {
+			t.Errorf("error should contain 'canceled', got: %v", err)
+		}
+	})
+
+	// --- Empty: 0 requests → empty result, no error ---
+	t.Run("Empty", func(t *testing.T) {
+		r := NewPubGrubResolver()
+
+		// nil slice
+		result, err := r.Resolve(context.Background(), nil, DefaultResolveOptions())
+		if err != nil {
+			t.Fatalf("nil requests: unexpected error: %v", err)
+		}
+		if len(result.Packages) != 0 {
+			t.Errorf("nil requests: expected 0 packages, got %d", len(result.Packages))
+		}
+
+		// empty slice
+		result2, err2 := r.Resolve(context.Background(), []PackageRequest{}, DefaultResolveOptions())
+		if err2 != nil {
+			t.Fatalf("empty requests: unexpected error: %v", err2)
+		}
+		if len(result2.Packages) != 0 {
+			t.Errorf("empty requests: expected 0 packages, got %d", len(result2.Packages))
+		}
+	})
+
+	// --- No Version: package has no releases → error ---
+	t.Run("NoVersion", func(t *testing.T) {
+		m := &mockSource{
+			versions: map[string][]string{
+				"github:test/empty-pkg": {},
+			},
+		}
+		r := NewPubGrubResolver()
+		r.RegisterHandler("github", m)
+
+		_, err := r.Resolve(context.Background(), []PackageRequest{
+			req("empty-pkg", "github:test/empty-pkg", "^1.0"),
+		}, DefaultResolveOptions())
+
+		if err == nil {
+			t.Fatal("expected error for package with no versions, got nil")
+		}
+		if !strings.Contains(err.Error(), "empty-pkg") {
+			t.Errorf("error should mention package name 'empty-pkg', got: %s", err.Error())
+		}
+	})
+
+	// --- No Tags: github repo with no tags → "latest" constraint works ---
+	t.Run("NoTags", func(t *testing.T) {
+		m := &mockSource{
+			versions: map[string][]string{
+				"github:test/no-tags": {},
+			},
+		}
+		r := NewPubGrubResolver()
+		r.RegisterHandler("github", m)
+
+		result, err := r.Resolve(context.Background(), []PackageRequest{
+			{Name: "no-tags", Type: "skill", Source: "github:test/no-tags", Constraint: "latest"},
+		}, DefaultResolveOptions())
+
+		if err != nil {
+			t.Fatalf("latest constraint with no tags: unexpected error: %v", err)
+		}
+		if len(result.Packages) != 1 {
+			t.Fatalf("expected 1 package, got %d", len(result.Packages))
+		}
+		pkg := result.Packages[0]
+		if pkg.Resolved != "latest" {
+			t.Errorf("Resolved = %q, want %q", pkg.Resolved, "latest")
+		}
+		if pkg.Name != "no-tags" {
+			t.Errorf("Name = %q, want %q", pkg.Name, "no-tags")
+		}
+	})
+
+	// --- Name Collision: same name different type → both resolve, collision warning ---
+	t.Run("NameCollision", func(t *testing.T) {
+		m := &mockSource{
+			versions: map[string][]string{
+				"github:test/run": {"1.0.0"},
+			},
+			pkgs: map[string][]byte{
+				"github:test/run": makeAgentPkg("run", "1.0.0"),
+			},
+		}
+		r := NewPubGrubResolver()
+		r.RegisterHandler("github", m)
+
+		result, err := r.Resolve(context.Background(), []PackageRequest{
+			{Name: "run", Type: "skill", Source: "github:test/run", Constraint: "^1.0"},
+			{Name: "run", Type: "agent", Source: "github:test/run", Constraint: "^1.0"},
+		}, DefaultResolveOptions())
+
+		if err != nil {
+			t.Fatalf("name collision: unexpected error: %v", err)
+		}
+
+		// Both types should appear in the result (encoded as skill:run and agent:run)
+		if len(result.Packages) != 2 {
+			t.Fatalf("expected 2 packages, got %d", len(result.Packages))
+		}
+
+		foundSkill, foundAgent := false, false
+		for _, pkg := range result.Packages {
+			if pkg.Name != "run" {
+				t.Errorf("unexpected package name: %q", pkg.Name)
+				continue
+			}
+			switch pkg.Type {
+			case "skill":
+				foundSkill = true
+			case "agent":
+				foundAgent = true
+			default:
+				t.Errorf("unexpected package type: %q", pkg.Type)
+			}
+		}
+		if !foundSkill {
+			t.Error("expected skill type package in result")
+		}
+		if !foundAgent {
+			t.Error("expected agent type package in result")
+		}
+
+		// Collision warning
+		if len(result.Warnings) != 1 {
+			t.Fatalf("expected 1 collision warning, got %d: %v", len(result.Warnings), result.Warnings)
+		}
+		if !strings.Contains(result.Warnings[0], "collision") {
+			t.Errorf("warning should mention 'collision', got: %q", result.Warnings[0])
+		}
+		if !strings.Contains(result.Warnings[0], `"run"`) {
+			t.Errorf("warning should mention 'run', got: %q", result.Warnings[0])
+		}
+	})
+}
+

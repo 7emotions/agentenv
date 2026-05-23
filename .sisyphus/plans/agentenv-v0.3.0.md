@@ -755,7 +755,7 @@ Max Concurrent: 5 (Waves 1, 3)
 
   **Commit**: YES — `feat: switch to PubGrubResolver in lock/install` — `cmd/agentenv/lock.go`, `cmd/agentenv/install.go`
 
-- [ ] 21. 所有现有测试回归验证
+- [x] 21. 所有现有测试回归验证
 
   **What to do**:
   - 运行完整测试套件：`go test -race ./...`
@@ -779,7 +779,7 @@ Max Concurrent: 5 (Waves 1, 3)
 
   **Commit**: YES — `test: update tests for PubGrub behavior changes` — 受影响的测试文件
 
-- [ ] 22. 边界情况测试
+- [x] 22. 边界情况测试
 
   **What to do**:
   - 取消：context.Cancel → Resolve 应停止（检查 pubgrub Solve 是否接受 context）
