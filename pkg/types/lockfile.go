@@ -18,11 +18,13 @@ type LockedPackage struct {
 	SHA256       string      `json:"sha256,omitempty" yaml:"sha256,omitempty"`
 	Dependencies []LockedDep `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	InstalledAt  string      `json:"installed_at,omitempty" yaml:"installed_at,omitempty"`
+	ResolvedBy   string      `json:"resolved_by,omitempty" yaml:"resolved_by,omitempty"`
 }
 
 // LockedDep records a resolved dependency in the lockfile.
 type LockedDep struct {
 	Name     string `json:"name" yaml:"name"`
+	Type     PackageType `json:"type,omitempty" yaml:"type,omitempty"`
 	Version  string `json:"version" yaml:"version"`
 	Resolved string `json:"resolved" yaml:"resolved"`
 	Source   string `json:"source,omitempty" yaml:"source,omitempty"`

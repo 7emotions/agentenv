@@ -26,11 +26,13 @@ func Generate(packages []resolver.ResolvedPackage) (*types.Lockfile, error) {
 	for i, pkg := range sorted {
 		deps := make([]types.LockedDep, len(pkg.Dependencies))
 		for j, dep := range pkg.Dependencies {
-			deps[j] = types.LockedDep{
-				Name:     dep.Name,
-				Version:  dep.Version,
-				Resolved: dep.Resolved,
-			}
+		deps[j] = types.LockedDep{
+			Name:     dep.Name,
+			Type:     types.PackageType(dep.Type),
+			Version:  dep.Version,
+			Resolved: dep.Resolved,
+			Source:   dep.Source,
+		}
 		}
 		sort.Slice(deps, func(a, b int) bool {
 			return deps[a].Name < deps[b].Name
@@ -44,11 +46,12 @@ func Generate(packages []resolver.ResolvedPackage) (*types.Lockfile, error) {
 			Resolved:     pkg.Resolved,
 			SHA256:       pkg.SHA256,
 			Dependencies: deps,
+			ResolvedBy:   pkg.ResolvedBy,
 		}
 	}
 
 	lf := &types.Lockfile{
-		Version:     1,
+		Version:     3,
 		Generated:   time.Now().UTC().Format(time.RFC3339),
 		Packages:    locked,
 		Environment: countByType(sorted),

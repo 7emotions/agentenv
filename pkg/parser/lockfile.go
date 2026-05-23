@@ -103,6 +103,8 @@ func decodeLockedPackage(node yaml.Node) (*types.LockedPackage, error) {
 			pkg.Dependencies = deps
 		case "installed_at":
 			pkg.InstalledAt = val.Value
+		case "resolved_by":
+			pkg.ResolvedBy = val.Value
 		}
 	}
 	return pkg, nil
@@ -122,6 +124,8 @@ func decodeLockedDeps(node yaml.Node) ([]types.LockedDep, error) {
 			switch item.Content[j].Value {
 			case "name":
 				dep.Name = item.Content[j+1].Value
+			case "type":
+				dep.Type = types.PackageType(item.Content[j+1].Value)
 			case "version":
 				dep.Version = item.Content[j+1].Value
 			case "resolved":

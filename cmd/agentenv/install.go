@@ -214,8 +214,10 @@ func convertToLocked(packages []resolver.ResolvedPackage) []types.LockedPackage 
 		for j, dep := range pkg.Dependencies {
 			deps[j] = types.LockedDep{
 				Name:     dep.Name,
+				Type:     types.PackageType(dep.Type),
 				Version:  dep.Version,
 				Resolved: dep.Resolved,
+				Source:   dep.Source,
 			}
 		}
 		locked[i] = types.LockedPackage{
@@ -225,6 +227,7 @@ func convertToLocked(packages []resolver.ResolvedPackage) []types.LockedPackage 
 			Version:      pkg.Version,
 			Resolved:     pkg.Resolved,
 			SHA256:       pkg.SHA256,
+			ResolvedBy:   pkg.ResolvedBy,
 			Dependencies: deps,
 		}
 	}

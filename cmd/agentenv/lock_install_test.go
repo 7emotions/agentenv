@@ -657,8 +657,8 @@ skills:
 		t.Fatalf("parse lock: %v", err)
 	}
 
-	if lf.Version != 1 {
-		t.Errorf("version = %d, want 1", lf.Version)
+	if lf.Version != 3 {
+		t.Errorf("version = %d, want 3", lf.Version)
 	}
 	if len(lf.Packages) != 1 {
 		t.Errorf("packages = %d, want 1", len(lf.Packages))

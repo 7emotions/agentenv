@@ -429,7 +429,7 @@ Max Concurrent: 5 (Waves 1, 3)
   - Message: `feat(resolver): complete pubgrub adapter with dependency discovery and caching`
   - Files: `pkg/resolver/pubgrub_adapter.go`, `pkg/resolver/pubgrub_adapter_test.go`
 
-- [ ] 6. LockedPackage.ResolvedBy + LockedDep.Type/Source
+- [x] 6. LockedPackage.ResolvedBy + LockedDep.Type/Source
 
   **What to do**: LockedPackage 加 `ResolvedBy string`；LockedDep 加 `Type string` + `Source string`；更新引用代码；JSON 序列化测试
 
@@ -453,7 +453,7 @@ Max Concurrent: 5 (Waves 1, 3)
 
   **Commit**: YES — `feat(types): add ResolvedBy to LockedPackage, Type+Source to LockedDep` — `pkg/types/lockfile.go`
 
-- [ ] 7. Lockfile v3 格式定义 + 写入
+- [x] 7. Lockfile v3 格式定义 + 写入
 
   **What to do**: `pkg/lockfile/generate.go`: `Version: 3`，填充 `ResolvedBy` + `Dep.Type` + `Dep.Source`
 
@@ -473,7 +473,7 @@ Max Concurrent: 5 (Waves 1, 3)
 
   **Commit**: YES — `feat(lockfile): v3 format with resolved_by` — `pkg/lockfile/generate.go`, `pkg/lockfile/generate_test.go`
 
-- [ ] 8. Lockfile v1→v3 读取迁移
+- [x] 8. Lockfile v1→v3 读取迁移
 
   **What to do**: 读 version < 3 → 内存迁移（ResolvedBy=""，Dep.Type/Source=""）
 

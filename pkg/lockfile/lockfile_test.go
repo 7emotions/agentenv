@@ -36,8 +36,8 @@ func TestGenerate(t *testing.T) {
 		t.Fatalf("Generate returned error: %v", err)
 	}
 
-	if lf.Version != 1 {
-		t.Errorf("Version = %d, want 1", lf.Version)
+	if lf.Version != 3 {
+		t.Errorf("Version = %d, want 3", lf.Version)
 	}
 	if lf.Generated == "" {
 		t.Error("Generated timestamp is empty")
@@ -180,8 +180,8 @@ func TestEmptyLockfile(t *testing.T) {
 		t.Fatalf("Generate(nil): %v", err)
 	}
 
-	if lf.Version != 1 {
-		t.Errorf("Version = %d, want 1", lf.Version)
+	if lf.Version != 3 {
+		t.Errorf("Version = %d, want 3", lf.Version)
 	}
 	if len(lf.Packages) != 0 {
 		t.Errorf("len(Packages) = %d, want 0", len(lf.Packages))
@@ -221,7 +221,7 @@ func TestLockfileV2RoundTrip(t *testing.T) {
 	}
 
 	lf := &types.Lockfile{
-		Version:   1,
+		Version:   3,
 		Generated: "2025-01-01T00:00:00Z",
 		Packages:  pkgs,
 		Environment: types.LockfileEnvSnapshot{

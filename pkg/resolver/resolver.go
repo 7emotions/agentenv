@@ -27,6 +27,7 @@ type ResolvedPackage struct {
 	Resolved     string
 	SHA256       string
 	Dependencies []ResolvedDep
+	ResolvedBy   string
 }
 
 // ResolvedDep represents a resolved dependency within a package.
@@ -35,6 +36,7 @@ type ResolvedDep struct {
 	Type     string
 	Version  string
 	Resolved string
+	Source   string
 }
 
 // ResolutionResult holds the output of dependency resolution.
@@ -357,11 +359,12 @@ func (r *TopologicalBacktrackResolver) Resolve(ctx context.Context, requests []P
 					path:   newPath,
 					parent: name,
 				})
-				rp.Dependencies = append(rp.Dependencies, ResolvedDep{
-					Name:    dep.Name,
-					Type:    string(dep.Type),
-					Version: depConstraint,
-				})
+		rp.Dependencies = append(rp.Dependencies, ResolvedDep{
+				Name:    dep.Name,
+				Type:    string(dep.Type),
+				Version: depConstraint,
+				Source:  depSource,
+			})
 			}
 		}
 
