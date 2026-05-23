@@ -1,6 +1,9 @@
 package resolver
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"testing"
 
 	"github.com/7emotions/agentenv/pkg/types"
@@ -9,8 +12,12 @@ import (
 
 // mockAdapterHandler implements source.SourceHandler for adapter tests.
 type mockAdapterHandler struct {
-	versions []string
-	listErr  error
+	versions   []string
+	listErr    error
+	fetchData  []byte
+	fetchSHA   string
+	fetchErr   error
+	fetchCalls int
 }
 
 func (m *mockAdapterHandler) ListVersions(src types.SourceURL) ([]string, error) {
@@ -18,7 +25,35 @@ func (m *mockAdapterHandler) ListVersions(src types.SourceURL) ([]string, error)
 }
 
 func (m *mockAdapterHandler) Fetch(src types.SourceURL, version string) ([]byte, string, error) {
-	return nil, "", nil
+	m.fetchCalls++
+	return m.fetchData, m.fetchSHA, m.fetchErr
+}
+
+// makeTarGz creates a tar.gz archive containing agentpkg.yaml with the given content.
+func makeTarGz(t *testing.T, manifestContent string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	gw := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gw)
+
+	hdr := &tar.Header{
+		Name: "agentpkg.yaml",
+		Mode: 0644,
+		Size: int64(len(manifestContent)),
+	}
+	if err := tw.WriteHeader(hdr); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tw.Write([]byte(manifestContent)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := gw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
 }
 
 func TestAdapter_GetVersions(t *testing.T) {
@@ -69,9 +104,6 @@ func TestAdapter_EmptyVersionList(t *testing.T) {
 		t.Fatalf("GetVersions() unexpected error: %v", err)
 	}
 
-	if versions == nil {
-		t.Fatal("GetVersions() returned nil, want non-nil empty slice")
-	}
 	if len(versions) != 0 {
 		t.Fatalf("expected 0 versions, got %d", len(versions))
 	}
@@ -171,9 +203,6 @@ func TestAdapter_GetDependencies(t *testing.T) {
 		t.Fatalf("GetDependencies() unexpected error: %v", err)
 	}
 
-	if deps == nil {
-		t.Fatal("GetDependencies() returned nil, want non-nil empty slice")
-	}
 	if len(deps) != 0 {
 		t.Fatalf("expected 0 deps, got %d", len(deps))
 	}
@@ -192,6 +221,189 @@ func TestAdapter_ListVersionsError(t *testing.T) {
 	}
 	if err != errFakeNetwork {
 		t.Errorf("GetVersions() error = %v, want %v", err, errFakeNetwork)
+	}
+}
+
+func TestAdapter_Dependencies_Discovery(t *testing.T) {
+	manifest := `name: test-pkg
+version: 1.0.0
+dependencies:
+  - name: dep-a
+    type: skill
+    constraint: ">=1.0.0, <2.0.0"
+  - name: dep-b
+    type: mcp
+    constraint: ">=0.5.0"
+`
+	handler := &mockAdapterHandler{
+		versions:  []string{"1.0.0"},
+		fetchData: makeTarGz(t, manifest),
+	}
+	srcURL, _ := types.ParseSourceURL("github:test/pkg")
+	src := NewAgentenvSource(handler, &srcURL, nil)
+
+	sv, err := pubgrub.ParseSemanticVersion("1.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deps, err := src.GetDependencies(pubgrub.MakeName("skill:pkg"), sv)
+	if err != nil {
+		t.Fatalf("GetDependencies() unexpected error: %v", err)
+	}
+
+	if len(deps) != 2 {
+		t.Fatalf("expected 2 deps, got %d", len(deps))
+	}
+
+	// Verify dep-a: skill:dep-a with constraint >=1.0.0, <2.0.0
+	wantA := pubgrub.MakeName("skill:dep-a")
+	if deps[0].Name != wantA {
+		t.Errorf("deps[0].Name = %v, want %v", deps[0].Name, wantA)
+	}
+	if !deps[0].Positive {
+		t.Errorf("deps[0] should be positive")
+	}
+	if deps[0].Condition == nil {
+		t.Error("deps[0].Condition should not be nil")
+	}
+
+	// Verify dep-b: mcp:dep-b with constraint >=0.5.0
+	wantB := pubgrub.MakeName("mcp:dep-b")
+	if deps[1].Name != wantB {
+		t.Errorf("deps[1].Name = %v, want %v", deps[1].Name, wantB)
+	}
+	if !deps[1].Positive {
+		t.Errorf("deps[1] should be positive")
+	}
+	if deps[1].Condition == nil {
+		t.Error("deps[1].Condition should not be nil")
+	}
+}
+
+func TestAdapter_Dependencies_MissingManifest(t *testing.T) {
+	handler := &mockAdapterHandler{
+		versions:  []string{"1.0.0"},
+		fetchData: []byte("not-a-tar-gz"),
+	}
+	srcURL, _ := types.ParseSourceURL("github:test/pkg")
+	src := NewAgentenvSource(handler, &srcURL, nil)
+
+	sv, err := pubgrub.ParseSemanticVersion("1.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deps, err := src.GetDependencies(pubgrub.MakeName("skill:pkg"), sv)
+	if err != nil {
+		t.Fatalf("GetDependencies() unexpected error: %v", err)
+	}
+	if len(deps) != 0 {
+		t.Fatalf("expected 0 deps, got %d", len(deps))
+	}
+}
+
+func TestAdapter_Dependencies_FetchError(t *testing.T) {
+	handler := &mockAdapterHandler{
+		versions: []string{"1.0.0"},
+		fetchErr: errFakeNetwork,
+	}
+	srcURL, _ := types.ParseSourceURL("github:test/pkg")
+	src := NewAgentenvSource(handler, &srcURL, nil)
+
+	sv, err := pubgrub.ParseSemanticVersion("1.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = src.GetDependencies(pubgrub.MakeName("skill:pkg"), sv)
+	if err == nil {
+		t.Fatal("GetDependencies() expected error, got nil")
+	}
+	if err != errFakeNetwork {
+		t.Errorf("GetDependencies() error = %v, want %v", err, errFakeNetwork)
+	}
+}
+
+func TestAdapter_Dependencies_Caching(t *testing.T) {
+	manifest := `name: test-pkg
+version: 1.0.0
+dependencies:
+  - name: dep-a
+    type: skill
+    constraint: ">=1.0.0"
+`
+	handler := &mockAdapterHandler{
+		versions:  []string{"1.0.0"},
+		fetchData: makeTarGz(t, manifest),
+	}
+	srcURL, _ := types.ParseSourceURL("github:test/pkg")
+	src := NewAgentenvSource(handler, &srcURL, nil)
+
+	sv, err := pubgrub.ParseSemanticVersion("1.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// First call - should trigger a fetch
+	deps1, err := src.GetDependencies(pubgrub.MakeName("skill:pkg"), sv)
+	if err != nil {
+		t.Fatalf("first GetDependencies() error: %v", err)
+	}
+	if len(deps1) != 1 {
+		t.Fatalf("expected 1 dep, got %d", len(deps1))
+	}
+
+	// Second call with same name+version - should use cache
+	deps2, err := src.GetDependencies(pubgrub.MakeName("skill:pkg"), sv)
+	if err != nil {
+		t.Fatalf("second GetDependencies() error: %v", err)
+	}
+	if len(deps2) != 1 {
+		t.Fatalf("expected 1 dep, got %d", len(deps2))
+	}
+
+	// Verify the underlying Fetch was only called once
+	if handler.fetchCalls != 1 {
+		t.Errorf("expected 1 underlying fetch call, got %d", handler.fetchCalls)
+	}
+}
+
+func TestAdapter_Dependencies_EmptyConstraint(t *testing.T) {
+	manifest := `name: test-pkg
+version: 1.0.0
+dependencies:
+  - name: dep-a
+    type: skill
+    constraint: ""
+  - name: dep-b
+    type: tool
+    constraint: ">=1.0.0"
+`
+	handler := &mockAdapterHandler{
+		versions:  []string{"1.0.0"},
+		fetchData: makeTarGz(t, manifest),
+	}
+	srcURL, _ := types.ParseSourceURL("github:test/pkg")
+	src := NewAgentenvSource(handler, &srcURL, nil)
+
+	sv, err := pubgrub.ParseSemanticVersion("1.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deps, err := src.GetDependencies(pubgrub.MakeName("skill:pkg"), sv)
+	if err != nil {
+		t.Fatalf("GetDependencies() unexpected error: %v", err)
+	}
+
+	if len(deps) != 2 {
+		t.Fatalf("expected 2 deps, got %d", len(deps))
+	}
+
+	// dep-a has empty constraint → should be "*" (any version)
+	if deps[0].Condition == nil {
+		t.Error("deps[0].Condition should not be nil (empty constraint becomes '*')")
 	}
 }
 

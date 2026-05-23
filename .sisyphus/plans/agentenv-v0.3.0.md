@@ -373,7 +373,7 @@ Max Concurrent: 5 (Waves 1, 3)
   - Message: `feat(resolver): SourceHandler to pubgrub Source adapter skeleton`
   - Files: `pkg/resolver/pubgrub_adapter.go`, `pkg/resolver/pubgrub_adapter_test.go`
 
-- [ ] 5. 适配器完整实现 + CachedSource + 依赖发现
+- [x] 5. 适配器完整实现 + CachedSource + 依赖发现
 
   **What to do**:
   - 完成 `GetPackageDependencies`:
