@@ -1,0 +1,71 @@
+version: 2
+
+project_name: agentenv
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: ./cmd/agentenv
+    binary: agentenv
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+
+archives:
+  - formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- if eq .Os "darwin" }}Darwin_
+      {{- else if eq .Os "linux" }}Linux_
+      {{- end }}
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "arm64" }}aarch64
+      {{- end }}
+    files:
+      - LICENSE*
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot: {}
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+
+release:
+  github:
+    owner: agentenv
+    name: agentenv
+  header: |
+    ## agentenv {{ .Version }}
+
+    Release of agentenv {{ .Version }}. See the [changelog](https://github.com/agentenv/agentenv/releases/tag/{{ .Tag }}) for details.
+
+brews:
+  - name: agentenv
+    repository:
+      owner: agentenv
+      name: homebrew-agentenv
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    homepage: "https://github.com/agentenv/agentenv"
+    description: "AI agent environment management CLI"
+    license: "MIT"
+    install: |
+      bin.install "agentenv"
+    test: |
+      system "#{bin}/agentenv version"
