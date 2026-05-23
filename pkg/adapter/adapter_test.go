@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/7emotions/agentenv/pkg/types"
@@ -251,6 +252,22 @@ func TestRegistry_EmptyNamePanics(t *testing.T) {
 		}
 	}()
 	Register("", NewClaudeCodeAdapterWithBase(t.TempDir()))
+}
+
+func TestRegistryRace(t *testing.T) {
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := Get("claude-code")
+			if err != nil {
+				t.Errorf("Get('claude-code'): %v", err)
+			}
+			_ = List()
+		}()
+	}
+	wg.Wait()
 }
 
 func TestManifestRoundTrip(t *testing.T) {

@@ -193,10 +193,13 @@ func TestEmptyLockfile(t *testing.T) {
 		t.Fatalf("WriteLockfile: %v", err)
 	}
 
-	// But Read should reject empty packages
-	_, err = Read(data)
-	if err == nil {
-		t.Error("expected error for empty lockfile, got nil")
+	// Empty lockfile should be readable
+	got, err := Read(data)
+	if err != nil {
+		t.Fatalf("Read of empty lockfile: %v", err)
+	}
+	if len(got.Packages) != 0 {
+		t.Errorf("len(Packages) = %d, want 0", len(got.Packages))
 	}
 }
 

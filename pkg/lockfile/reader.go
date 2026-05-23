@@ -9,13 +9,11 @@ import (
 )
 
 // Read parses a lockfile from bytes and validates required fields.
+// An empty packages list is valid — it represents an environment with no packages.
 func Read(data []byte) (*types.Lockfile, error) {
 	lf, err := parser.ParseLockfile(data)
 	if err != nil {
 		return nil, err
-	}
-	if len(lf.Packages) == 0 {
-		return nil, fmt.Errorf("lockfile contains no packages")
 	}
 	return lf, nil
 }
