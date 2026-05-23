@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	agentenvError "github.com/7emotions/agentenv/pkg/errors"
 	"github.com/spf13/cobra"
@@ -39,7 +38,7 @@ This operation is irreversible.`,
 
 		activeLock := filepath.Join(root, "ACTIVE")
 		if data, err := os.ReadFile(activeLock); err == nil {
-			activeName := strings.TrimSpace(string(data))
+			activeName := parseActiveName(string(data))
 			if activeName == name && !deleteForce {
 				return agentenvError.UserError(
 					fmt.Sprintf("Cannot delete active environment %q", name),

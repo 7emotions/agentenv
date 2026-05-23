@@ -173,7 +173,7 @@ func findEnvDir(name string) (string, error) {
 
 	activeLock := filepath.Join(root, "ACTIVE")
 	if data, err := os.ReadFile(activeLock); err == nil {
-		activeName := strings.TrimSpace(string(data))
+		activeName := parseActiveName(string(data))
 		if activeName != "" {
 			envDir := filepath.Join(root, "envs", activeName)
 			if fi, err := os.Stat(envDir); err == nil && fi.IsDir() {

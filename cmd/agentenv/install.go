@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/7emotions/agentenv/pkg/lockfile"
@@ -141,7 +140,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	activeLock := filepath.Join(root, "ACTIVE")
 	if data, err := os.ReadFile(activeLock); err == nil {
-		activeName := strings.TrimSpace(string(data))
+		activeName := parseActiveName(string(data))
 		if activeName != "" {
 			envName := filepath.Base(envDir)
 			if activeName == envName {

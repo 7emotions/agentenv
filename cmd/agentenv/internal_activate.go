@@ -271,6 +271,17 @@ func rollback(ctx context.Context, a adapter.AgentAdapter, actions []action, bac
 	return rollbackErrors
 }
 
+// parseActiveName extracts the environment name from ACTIVE lock content.
+// The ACTIVE lock format is <name>:<framework> (e.g. "test-opencode:opencode").
+// Legacy format (just <name>) is also supported.
+func parseActiveName(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if idx := strings.LastIndex(raw, ":"); idx > 0 {
+		return raw[:idx]
+	}
+	return raw
+}
+
 // activateEnv performs the full transactional environment activation.
 func activateEnv(ctx context.Context, name string, cmd *cobra.Command) error {
 	root, err := agentenvRoot()
@@ -327,13 +338,7 @@ func activateEnv(ctx context.Context, name string, cmd *cobra.Command) error {
 	activeLock := filepath.Join(root, "ACTIVE")
 	if data, err := os.ReadFile(activeLock); err == nil {
 		currentActive := strings.TrimSpace(string(data))
-		// Strip :framework suffix for name comparison (ACTIVE lock format: <name>:<framework>)
-		currentName := currentActive
-		if idx := strings.LastIndex(currentActive, ":"); idx >= 0 {
-			if idx > 0 {
-				currentName = currentActive[:idx]
-			}
-		}
+		currentName := parseActiveName(currentActive)
 		if currentName != "" && currentName != name {
 			if err := deactivateEnv(ctx, currentActive, root); err != nil {
 				return agentenvError.SystemError(

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	agentenvError "github.com/7emotions/agentenv/pkg/errors"
 	"github.com/7emotions/agentenv/pkg/envfile"
@@ -51,19 +50,15 @@ Use --json for machine-readable output.`,
 					"Cannot read active lock",
 					"Check file permissions in ~/.agentenv/.").WithCause(err)
 			}
-		name = strings.TrimSpace(string(data))
-		// Parse ACTIVE lock format: <name>:<framework> or <name> (legacy)
-		if idx := strings.LastIndex(name, ":"); idx > 0 {
-			name = name[:idx]
+			name = parseActiveName(string(data))
+			if name == "" {
+				return agentenvError.UserError(
+					"No environment specified and no active environment found",
+					"Specify an environment name, or activate one first.")
+			}
 		}
-		if name == "" {
-			return agentenvError.UserError(
-				"No environment specified and no active environment found",
-				"Specify an environment name, or activate one first.")
-		}
-	}
 
-	envDir := filepath.Join(root, "envs", name)
+		envDir := filepath.Join(root, "envs", name)
 		if _, err := os.Stat(envDir); os.IsNotExist(err) {
 			return agentenvError.UserError(
 				fmt.Sprintf("Environment %q not found", name),
@@ -101,20 +96,17 @@ Use --json for machine-readable output.`,
 			}
 		}
 
-	activeName := ""
-	if data, err := os.ReadFile(filepath.Join(root, "ACTIVE")); err == nil {
-		activeName = strings.TrimSpace(string(data))
-		if idx := strings.LastIndex(activeName, ":"); idx > 0 {
-			activeName = activeName[:idx]
+		activeName := ""
+		if data, err := os.ReadFile(filepath.Join(root, "ACTIVE")); err == nil {
+			activeName = parseActiveName(string(data))
 		}
-	}
 
-	info := envInfo{
-		Name:          name,
-		Path:          envDir,
-		PackagesCount: pkgCount,
-		Active:        name == activeName,
-	}
+		info := envInfo{
+			Name:          name,
+			Path:          envDir,
+			PackagesCount: pkgCount,
+			Active:        name == activeName,
+		}
 		if f, ok := state["agent_framework"].(string); ok {
 			info.AgentFramework = f
 		}

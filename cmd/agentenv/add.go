@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	agentenvError "github.com/7emotions/agentenv/pkg/errors"
 	"github.com/7emotions/agentenv/pkg/envfile"
@@ -98,7 +97,7 @@ Examples:
 				"No active environment",
 				"Activate one first with 'agentenv activate <name>'")
 		}
-		envName := strings.TrimSpace(string(activeData))
+		envName := parseActiveName(string(activeData))
 		if envName == "" {
 			return agentenvError.UserError(
 				"No active environment",

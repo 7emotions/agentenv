@@ -463,7 +463,7 @@ skills:
 	populateStore(t, home, "skill", "github_test_install-skill", "1.0.0", skillTarGz)
 
 	activeLock := filepath.Join(home, ".agentenv", "ACTIVE")
-	os.WriteFile(activeLock, []byte("iact-env"), 0o644)
+	os.WriteFile(activeLock, []byte("iact-env:claude-code"), 0o644)
 
 	installCmd.SetOut(&bytes.Buffer{})
 	installCmd.SetErr(&bytes.Buffer{})
@@ -596,7 +596,7 @@ func TestFindEnvDir(t *testing.T) {
 
 	t.Run("by active env", func(t *testing.T) {
 		activeLock := filepath.Join(root, "ACTIVE")
-		os.WriteFile(activeLock, []byte(name), 0o644)
+		os.WriteFile(activeLock, []byte(name+":claude-code"), 0o644)
 		defer os.Remove(activeLock)
 
 		got, err := findEnvDir("")

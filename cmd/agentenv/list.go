@@ -49,7 +49,7 @@ Use --json for machine-readable output.`,
 
 		activeName := ""
 		if data, err := os.ReadFile(filepath.Join(root, "ACTIVE")); err == nil {
-			activeName = string(data)
+			activeName = parseActiveName(string(data))
 		}
 
 		var envs []envEntry

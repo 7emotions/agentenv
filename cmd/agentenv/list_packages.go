@@ -59,10 +59,7 @@ Package types: skill, mcp, agent, tool, hook, prompt`,
 					"Cannot read active lock",
 					"Check file permissions in ~/.agentenv/.").WithCause(err)
 			}
-		name = strings.TrimSpace(string(data))
-		if idx := strings.LastIndex(name, ":"); idx > 0 {
-			name = name[:idx]
-		}
+		name = parseActiveName(string(data))
 		if name == "" {
 				return agentenvError.UserError(
 					"No environment specified and no active environment found",

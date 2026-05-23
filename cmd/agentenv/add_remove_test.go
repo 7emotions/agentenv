@@ -13,7 +13,7 @@ import (
 func writeActiveLock(t *testing.T, home, envName string) {
 	t.Helper()
 	lockPath := filepath.Join(home, ".agentenv", "ACTIVE")
-	if err := os.WriteFile(lockPath, []byte(envName), 0o644); err != nil {
+	if err := os.WriteFile(lockPath, []byte(envName+":claude-code"), 0o644); err != nil {
 		t.Fatalf("write ACTIVE lock: %v", err)
 	}
 }

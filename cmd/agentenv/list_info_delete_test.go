@@ -62,7 +62,7 @@ func TestList_JSONOutput(t *testing.T) {
 	createTestEnv(t, home, "json-env", "name: json-env\ndescription: json\n", "")
 
 	activeLock := filepath.Join(home, ".agentenv", "ACTIVE")
-	os.WriteFile(activeLock, []byte("json-env"), 0o644)
+	os.WriteFile(activeLock, []byte("json-env:claude-code"), 0o644)
 
 	jsonOutput = true
 	defer func() { jsonOutput = false }()
@@ -127,7 +127,7 @@ func TestInfo_ActiveDefault(t *testing.T) {
 	createTestEnv(t, home, "active-env", "name: active-env\ndescription: active\n", "")
 
 	activeLock := filepath.Join(home, ".agentenv", "ACTIVE")
-	os.WriteFile(activeLock, []byte("active-env"), 0o644)
+	os.WriteFile(activeLock, []byte("active-env:claude-code"), 0o644)
 
 	var stdoutBuf bytes.Buffer
 	infoCmd.SetOut(&stdoutBuf)
@@ -275,7 +275,7 @@ func TestDelete_ActiveWithoutForce(t *testing.T) {
 	createTestEnv(t, home, "active-del", "name: active-del\ndescription: active for delete test\n", "")
 
 	activeLock := filepath.Join(home, ".agentenv", "ACTIVE")
-	os.WriteFile(activeLock, []byte("active-del"), 0o644)
+	os.WriteFile(activeLock, []byte("active-del:claude-code"), 0o644)
 
 	deleteCmd.SetOut(&bytes.Buffer{})
 	deleteCmd.SetErr(&bytes.Buffer{})
@@ -300,7 +300,7 @@ func TestDelete_ActiveWithForce(t *testing.T) {
 	createTestEnv(t, home, "force-del", "name: force-del\ndescription: force delete\n", "")
 
 	activeLock := filepath.Join(home, ".agentenv", "ACTIVE")
-	os.WriteFile(activeLock, []byte("force-del"), 0o644)
+	os.WriteFile(activeLock, []byte("force-del:claude-code"), 0o644)
 
 	deleteForce = true
 	defer func() { deleteForce = false }()
@@ -566,7 +566,7 @@ skills:
 	createTestEnv(t, home, "active-pkg", yamlContent, "")
 
 	activeLock := filepath.Join(home, ".agentenv", "ACTIVE")
-	os.WriteFile(activeLock, []byte("active-pkg"), 0o644)
+	os.WriteFile(activeLock, []byte("active-pkg:claude-code"), 0o644)
 
 	var stdoutBuf bytes.Buffer
 	listPackagesCmd.SetOut(&stdoutBuf)
@@ -581,4 +581,58 @@ skills:
 	if !strings.Contains(output, "active-skill") {
 		t.Errorf("output should contain active-skill, got: %s", output)
 	}
+}
+
+func TestActiveLockFormat_RoundTrip(t *testing.T) {
+	home := newTestHome(t)
+
+	yamlContent := `name: fmt-env
+description: format roundtrip test
+skills:
+  fmt-skill:
+    source: github:test/fmt-skill
+mcps:
+  fmt-mcp:
+    source: npm:@test/fmt-mcp
+`
+	createTestEnv(t, home, "fmt-env", yamlContent, "")
+
+	activeLock := filepath.Join(home, ".agentenv", "ACTIVE")
+	os.WriteFile(activeLock, []byte("fmt-env:claude-code"), 0o644)
+
+	t.Run("info reads name:framework format", func(t *testing.T) {
+		var stdoutBuf bytes.Buffer
+		infoCmd.SetOut(&stdoutBuf)
+		infoCmd.SetErr(&bytes.Buffer{})
+
+		err := infoCmd.RunE(infoCmd, nil)
+		if err != nil {
+			t.Fatalf("info (no args) with name:framework ACTIVE: %v", err)
+		}
+		output := stdoutBuf.String()
+		if !strings.Contains(output, "fmt-env") {
+			t.Errorf("output should contain env name, got: %s", output)
+		}
+		if !strings.Contains(output, "Active:         true") {
+			t.Errorf("expected Active: true, got: %s", output)
+		}
+	})
+
+	t.Run("list-packages reads name:framework format", func(t *testing.T) {
+		var stdoutBuf bytes.Buffer
+		listPackagesCmd.SetOut(&stdoutBuf)
+		listPackagesCmd.SetErr(&bytes.Buffer{})
+
+		err := listPackagesCmd.RunE(listPackagesCmd, nil)
+		if err != nil {
+			t.Fatalf("list-packages (no args) with name:framework ACTIVE: %v", err)
+		}
+		output := stdoutBuf.String()
+		if !strings.Contains(output, "fmt-skill") {
+			t.Errorf("output should contain fmt-skill, got: %s", output)
+		}
+		if !strings.Contains(output, "fmt-mcp") {
+			t.Errorf("output should contain fmt-mcp, got: %s", output)
+		}
+	})
 }
