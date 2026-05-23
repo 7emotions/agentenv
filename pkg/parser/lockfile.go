@@ -126,6 +126,8 @@ func decodeLockedDeps(node yaml.Node) ([]types.LockedDep, error) {
 				dep.Version = item.Content[j+1].Value
 			case "resolved":
 				dep.Resolved = item.Content[j+1].Value
+			case "source":
+				dep.Source = item.Content[j+1].Value
 			}
 		}
 		result = append(result, dep)

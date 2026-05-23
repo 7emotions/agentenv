@@ -203,6 +203,101 @@ func TestEmptyLockfile(t *testing.T) {
 	}
 }
 
+func TestLockfileV2RoundTrip(t *testing.T) {
+	// Build a LockedDep with a Source field (v2 format).
+	deps := []types.LockedDep{
+		{Name: "dep-a", Version: "1.0.0", Resolved: "sha256:abc", Source: "npm:@scope/pkg"},
+	}
+
+	pkgs := []types.LockedPackage{
+		{
+			Name:         "test-pkg",
+			Type:         types.PackageTypeSkill,
+			Source:       "github:owner/repo",
+			Version:      "2.0.0",
+			Resolved:     "https://example.com/pkg.tar.gz",
+			Dependencies: deps,
+		},
+	}
+
+	lf := &types.Lockfile{
+		Version:   1,
+		Generated: "2025-01-01T00:00:00Z",
+		Packages:  pkgs,
+		Environment: types.LockfileEnvSnapshot{
+			SkillsCount: 1,
+		},
+	}
+
+	data, err := parser.WriteLockfile(lf)
+	if err != nil {
+		t.Fatalf("WriteLockfile: %v", err)
+	}
+
+	got, err := Read(data)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+
+	if len(got.Packages) != 1 {
+		t.Fatalf("len(Packages) = %d, want 1", len(got.Packages))
+	}
+	if len(got.Packages[0].Dependencies) != 1 {
+		t.Fatalf("len(Dependencies) = %d, want 1", len(got.Packages[0].Dependencies))
+	}
+
+	gotDep := got.Packages[0].Dependencies[0]
+	if gotDep.Source != "npm:@scope/pkg" {
+		t.Errorf("Dep Source = %q, want %q", gotDep.Source, "npm:@scope/pkg")
+	}
+	if gotDep.Name != "dep-a" {
+		t.Errorf("Dep Name = %q, want %q", gotDep.Name, "dep-a")
+	}
+	if gotDep.Version != "1.0.0" {
+		t.Errorf("Dep Version = %q, want %q", gotDep.Version, "1.0.0")
+	}
+	if gotDep.Resolved != "sha256:abc" {
+		t.Errorf("Dep Resolved = %q, want %q", gotDep.Resolved, "sha256:abc")
+	}
+}
+
+func TestLockfileV1WithoutSource(t *testing.T) {
+	// v1 lockfile YAML without source in dependency entries should still parse.
+	v1YAML := `version: 1
+generated: "2025-01-01T00:00:00Z"
+packages:
+  - name: test-pkg
+    type: skill
+    source: github:owner/repo
+    version: "1.0.0"
+    resolved: https://example.com/pkg.tar.gz
+    dependencies:
+      - name: dep-a
+        version: "1.0.0"
+        resolved: sha256:abc
+`
+
+	lf, err := parser.ParseLockfile([]byte(v1YAML))
+	if err != nil {
+		t.Fatalf("ParseLockfile(v1): %v", err)
+	}
+
+	if len(lf.Packages) != 1 {
+		t.Fatalf("len(Packages) = %d, want 1", len(lf.Packages))
+	}
+	if len(lf.Packages[0].Dependencies) != 1 {
+		t.Fatalf("len(Dependencies) = %d, want 1", len(lf.Packages[0].Dependencies))
+	}
+
+	gotDep := lf.Packages[0].Dependencies[0]
+	if gotDep.Source != "" {
+		t.Errorf("Dep Source for v1 should be empty, got %q", gotDep.Source)
+	}
+	if gotDep.Name != "dep-a" {
+		t.Errorf("Dep Name = %q, want %q", gotDep.Name, "dep-a")
+	}
+}
+
 func TestSnapshotCounts(t *testing.T) {
 	pkgs := []resolver.ResolvedPackage{
 		{Name: "s1", Type: "skill", Source: "github:a/s1", Version: "1.0", Resolved: "url"},
