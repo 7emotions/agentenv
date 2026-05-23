@@ -157,9 +157,22 @@ func (a *CursorAdapter) WriteManifest(_ context.Context, manifest *Manifest) err
 // in the manifest, it returns an error to avoid overwriting user-managed skills.
 // If the existing skill is managed by agentenv, the old directory is replaced.
 func (a *CursorAdapter) InstallSkill(ctx context.Context, name, sourcePath string) error {
-	data, err := os.ReadFile(sourcePath)
+	fi, err := os.Stat(sourcePath)
 	if err != nil {
-		return fmt.Errorf("read skill source %q: %w", sourcePath, err)
+		return fmt.Errorf("stat skill source %q: %w", sourcePath, err)
+	}
+
+	var data []byte
+	if fi.IsDir() {
+		data, err = findSkillFile(sourcePath)
+		if err != nil {
+			return fmt.Errorf("cannot find skill file in %q: %w", sourcePath, err)
+		}
+	} else {
+		data, err = os.ReadFile(sourcePath)
+		if err != nil {
+			return fmt.Errorf("read skill source %q: %w", sourcePath, err)
+		}
 	}
 
 	skillsDir := a.skillsDir()

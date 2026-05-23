@@ -419,6 +419,10 @@ func TestE2E_OpenCode_FullCycle(t *testing.T) {
 
 	yamlContent := `name: e2e-oc
 description: "OpenCode E2E test"
+skills:
+  e2e-skill:
+    source: github:test/e2e-skill
+    version: "1.0.0"
 mcps:
   e2e-mcp:
     source: npm:@test/e2e-server
@@ -434,6 +438,12 @@ agents:
 	lockfileContent := `version: 1
 generated: "2026-05-24T12:00:00Z"
 packages:
+  - name: e2e-skill
+    type: skill
+    source: github:test/e2e-skill
+    version: "1.0.0"
+    resolved: 1.0.0
+    sha256: abc123
   - name: e2e-mcp
     type: mcp
     source: npm:@test/e2e-server
@@ -447,12 +457,14 @@ packages:
     resolved: 1.0.0
     sha256: ghi789
 environment_snapshot:
+  skills_count: 1
   mcps_count: 1
   agents_count: 1
 `
 
 	createTestEnv(t, home, "e2e-oc", yamlContent, lockfileContent)
 	fixFrameworkInState(t, home, "e2e-oc", "opencode")
+	populateStore(t, home, "skill", "github_test_e2e-skill", "1.0.0", fullCycleSkillTarGz())
 	populateStore(t, home, "mcp", "npm_at_test_e2e-server", "1.0.0", []byte("dummy-mcp-data"))
 	populateStore(t, home, "agent", "github_test_e2e-agent", "1.0.0", fullCycleAgentTarGz())
 
@@ -463,9 +475,10 @@ environment_snapshot:
 
 	verifyActiveLock(t, home, "e2e-oc:opencode")
 	paths := e2ePathsForFramework(home, "opencode")
+	verifySkillInstalled(t, paths, "opencode")
 	verifyMCPInstalled(t, paths)
 	verifyAgentInstalled(t, paths)
-	verifyManifestHasItems(t, home, "opencode", 0, 1, 1)
+	verifyManifestHasItems(t, home, "opencode", 1, 1, 1)
 
 	internalDeactivateCmd.SetOut(&bytes.Buffer{})
 	if err := internalDeactivateCmd.RunE(internalDeactivateCmd, nil); err != nil {
@@ -473,6 +486,7 @@ environment_snapshot:
 	}
 
 	verifyActiveLockRemoved(t, home)
+	verifySkillRemoved(t, paths)
 	verifyAgentRemoved(t, paths)
 	verifyManifestHasItems(t, home, "opencode", 0, 0, 0)
 }
@@ -483,6 +497,10 @@ func TestE2E_Cursor_FullCycle(t *testing.T) {
 
 	yamlContent := `name: e2e-cur
 description: "Cursor E2E test"
+skills:
+  e2e-skill:
+    source: github:test/e2e-skill
+    version: "1.0.0"
 mcps:
   e2e-mcp:
     source: npm:@test/e2e-server
@@ -498,6 +516,12 @@ agents:
 	lockfileContent := `version: 1
 generated: "2026-05-24T12:00:00Z"
 packages:
+  - name: e2e-skill
+    type: skill
+    source: github:test/e2e-skill
+    version: "1.0.0"
+    resolved: 1.0.0
+    sha256: abc123
   - name: e2e-mcp
     type: mcp
     source: npm:@test/e2e-server
@@ -511,12 +535,14 @@ packages:
     resolved: 1.0.0
     sha256: ghi789
 environment_snapshot:
+  skills_count: 1
   mcps_count: 1
   agents_count: 1
 `
 
 	createTestEnv(t, home, "e2e-cur", yamlContent, lockfileContent)
 	fixFrameworkInState(t, home, "e2e-cur", "cursor")
+	populateStore(t, home, "skill", "github_test_e2e-skill", "1.0.0", fullCycleSkillTarGz())
 	populateStore(t, home, "mcp", "npm_at_test_e2e-server", "1.0.0", []byte("dummy-mcp-data"))
 	populateStore(t, home, "agent", "github_test_e2e-agent", "1.0.0", fullCycleAgentTarGz())
 
@@ -527,9 +553,10 @@ environment_snapshot:
 
 	verifyActiveLock(t, home, "e2e-cur:cursor")
 	paths := e2ePathsForFramework(home, "cursor")
+	verifySkillInstalled(t, paths, "cursor")
 	verifyMCPInstalled(t, paths)
 	verifyAgentInstalled(t, paths)
-	verifyManifestHasItems(t, home, "cursor", 0, 1, 1)
+	verifyManifestHasItems(t, home, "cursor", 1, 1, 1)
 
 	internalDeactivateCmd.SetOut(&bytes.Buffer{})
 	if err := internalDeactivateCmd.RunE(internalDeactivateCmd, nil); err != nil {
@@ -537,6 +564,7 @@ environment_snapshot:
 	}
 
 	verifyActiveLockRemoved(t, home)
+	verifySkillRemoved(t, paths)
 	verifyAgentRemoved(t, paths)
 	verifyManifestHasItems(t, home, "cursor", 0, 0, 0)
 }

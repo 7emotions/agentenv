@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/7emotions/agentenv/pkg/types"
@@ -122,6 +124,24 @@ func (a *OpenCodeAdapter) WriteManifest(_ context.Context, manifest *Manifest) e
 
 // ---- Skills ----
 
+func findSkillFile(dir string) ([]byte, error) {
+	var mdPath string
+	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && strings.HasSuffix(d.Name(), ".md") {
+			mdPath = path
+			return io.EOF
+		}
+		return nil
+	})
+	if mdPath == "" {
+		return nil, fmt.Errorf("no .md file found in %q", dir)
+	}
+	return os.ReadFile(mdPath)
+}
+
 // InstallSkill copies SKILL.md from sourcePath into
 // ~/.config/opencode/skills/<name>/SKILL.md and records it in the manifest.
 //
@@ -129,9 +149,22 @@ func (a *OpenCodeAdapter) WriteManifest(_ context.Context, manifest *Manifest) e
 // in the manifest, it returns an error to avoid overwriting user-managed skills.
 // If the existing skill is managed by agentenv, the old directory is replaced.
 func (a *OpenCodeAdapter) InstallSkill(ctx context.Context, name, sourcePath string) error {
-	data, err := os.ReadFile(sourcePath)
+	fi, err := os.Stat(sourcePath)
 	if err != nil {
-		return fmt.Errorf("read skill source %q: %w", sourcePath, err)
+		return fmt.Errorf("stat skill source %q: %w", sourcePath, err)
+	}
+
+	var data []byte
+	if fi.IsDir() {
+		data, err = findSkillFile(sourcePath)
+		if err != nil {
+			return fmt.Errorf("cannot find skill file in %q: %w", sourcePath, err)
+		}
+	} else {
+		data, err = os.ReadFile(sourcePath)
+		if err != nil {
+			return fmt.Errorf("read skill source %q: %w", sourcePath, err)
+		}
 	}
 
 	skillsDir := a.skillsDir()

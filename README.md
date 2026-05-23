@@ -1,13 +1,13 @@
 <p align="center">
+  <h1 align="center">AgentEnv</h1>
+  <p align="center"><strong>conda for AI agents</strong> — isolated, reproducible environments for agent development.</p>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/github/go-mod/go-version/7emotions/agentenv?label=go" alt="Go Version">
   <img src="https://img.shields.io/github/license/7emotions/agentenv" alt="License">
   <img src="https://img.shields.io/github/v/release/7emotions/agentenv" alt="Release">
   <img src="https://img.shields.io/github/actions/workflow/status/7emotions/agentenv/ci.yml?branch=main" alt="CI">
-</p>
-
-<p align="center">
-  <h1 align="center">agentenv</h1>
-  <p align="center"><strong>conda for AI agents</strong> — isolated, reproducible environments for agent development.</p>
 </p>
 
 ---

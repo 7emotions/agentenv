@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-REPO="agentenv/agentenv"
+REPO="7emotions/agentenv"
 BINARY="agentenv"
 INSTALL_DIR="/usr/local/bin"
 
