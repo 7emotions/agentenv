@@ -26,13 +26,13 @@ func Generate(packages []resolver.ResolvedPackage) (*types.Lockfile, error) {
 	for i, pkg := range sorted {
 		deps := make([]types.LockedDep, len(pkg.Dependencies))
 		for j, dep := range pkg.Dependencies {
-		deps[j] = types.LockedDep{
-			Name:     dep.Name,
-			Type:     types.PackageType(dep.Type),
-			Version:  dep.Version,
-			Resolved: dep.Resolved,
-			Source:   dep.Source,
-		}
+			deps[j] = types.LockedDep{
+				Name:     dep.Name,
+				Type:     types.PackageType(dep.Type),
+				Version:  dep.Version,
+				Resolved: dep.Resolved,
+				Source:   dep.Source,
+			}
 		}
 		sort.Slice(deps, func(a, b int) bool {
 			return deps[a].Name < deps[b].Name

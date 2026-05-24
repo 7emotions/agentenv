@@ -32,9 +32,9 @@ Examples:
   agentenv info my-env
   agentenv list-packages my-env --type skill
   agentenv delete my-env`,
-	Version:          getVersion(),
-	SilenceErrors:    true,
-	SilenceUsage:     true,
+	Version:       getVersion(),
+	SilenceErrors: true,
+	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
@@ -50,7 +50,7 @@ func getVersion() string {
 	if v := os.Getenv("VERSION"); v != "" {
 		return v
 	}
-	return "0.1.0-dev"
+	return "dev"
 }
 
 func writeJSON(cmd *cobra.Command, data interface{}) {

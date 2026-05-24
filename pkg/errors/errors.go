@@ -116,4 +116,3 @@ func As(err error, target interface{}) bool {
 func Is(err, target error) bool {
 	return errors.Is(err, target)
 }
-

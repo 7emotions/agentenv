@@ -390,4 +390,3 @@ func TestPubGrubDiamondConflict(t *testing.T) {
 		t.Error("error should mention 'B'")
 	}
 }
-

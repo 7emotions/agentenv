@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	agentenvError "github.com/7emotions/agentenv/pkg/errors"
 	"github.com/7emotions/agentenv/internal/shell"
+	agentenvError "github.com/7emotions/agentenv/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -21,7 +21,7 @@ Usage in your shell config:
   eval "$(agentenv init bash)"  # add to ~/.bashrc
 
 Supported shells: zsh, bash`,
-	Args: cobra.ExactArgs(1),
+	Args:      cobra.ExactArgs(1),
 	ValidArgs: []string{"zsh", "bash"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		shellName := args[0]

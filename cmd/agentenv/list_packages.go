@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	agentenvError "github.com/7emotions/agentenv/pkg/errors"
 	"github.com/7emotions/agentenv/pkg/envfile"
+	agentenvError "github.com/7emotions/agentenv/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -59,8 +59,8 @@ Package types: skill, mcp, agent, tool, hook, prompt`,
 					"Cannot read active lock",
 					"Check file permissions in ~/.agentenv/.").WithCause(err)
 			}
-		name = parseActiveName(string(data))
-		if name == "" {
+			name = parseActiveName(string(data))
+			if name == "" {
 				return agentenvError.UserError(
 					"No environment specified and no active environment found",
 					"Specify an environment name, or activate one first.")

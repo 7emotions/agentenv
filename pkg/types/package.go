@@ -40,7 +40,7 @@ type PackageDependency struct {
 
 // RuntimeRequirement describes a runtime prerequisite for a package.
 type RuntimeRequirement struct {
-	Type        string `json:"type" yaml:"type"`                   // "binary", "env"
+	Type        string `json:"type" yaml:"type"` // "binary", "env"
 	Name        string `json:"name" yaml:"name"`
 	MinVersion  string `json:"min_version,omitempty" yaml:"min_version,omitempty"`
 	Optional    bool   `json:"optional,omitempty" yaml:"optional,omitempty"`

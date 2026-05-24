@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"regexp"
 
-	agentenvError "github.com/7emotions/agentenv/pkg/errors"
 	"github.com/7emotions/agentenv/pkg/envfile"
+	agentenvError "github.com/7emotions/agentenv/pkg/errors"
 	"github.com/7emotions/agentenv/pkg/types"
 	"github.com/spf13/cobra"
 )

@@ -606,7 +606,7 @@ func TestExtractTarGz(t *testing.T) {
 	dest := t.TempDir()
 
 	files := map[string]string{
-		"file1.txt": "content1",
+		"file1.txt":     "content1",
 		"sub/file2.txt": "content2",
 	}
 
@@ -641,11 +641,11 @@ func TestExtractTarGz(t *testing.T) {
 
 func TestBuildMCPServerFromConfig(t *testing.T) {
 	tests := []struct {
-		name     string
-		cfg      map[string]interface{}
-		wantCmd  string
-		wantURL  string
-		wantTpt  string
+		name    string
+		cfg     map[string]interface{}
+		wantCmd string
+		wantURL string
+		wantTpt string
 	}{
 		{
 			name: "command-based",

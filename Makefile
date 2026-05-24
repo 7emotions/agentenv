@@ -1,6 +1,6 @@
 BINARY_NAME=agentenv
 DIST_DIR=dist
-GO=/usr/local/go/bin/go
+GO=/usr/local/go1.26/bin/go
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)

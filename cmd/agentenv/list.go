@@ -11,9 +11,9 @@ import (
 )
 
 type envEntry struct {
-	Name   string `json:"name"`
-	Agent  string `json:"agent"`
-	Active bool   `json:"active"`
+	Name    string `json:"name"`
+	Agent   string `json:"agent"`
+	Active  bool   `json:"active"`
 	Created string `json:"created_at,omitempty"`
 }
 

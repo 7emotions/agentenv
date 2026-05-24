@@ -2,9 +2,9 @@ package types
 
 // Lockfile records the exact resolved state of an environment.
 type Lockfile struct {
-	Version     int                `json:"version" yaml:"version"`
-	Generated   string             `json:"generated" yaml:"generated"` // ISO 8601 timestamp
-	Packages    []LockedPackage    `json:"packages" yaml:"packages"`
+	Version     int                 `json:"version" yaml:"version"`
+	Generated   string              `json:"generated" yaml:"generated"` // ISO 8601 timestamp
+	Packages    []LockedPackage     `json:"packages" yaml:"packages"`
 	Environment LockfileEnvSnapshot `json:"environment_snapshot" yaml:"environment_snapshot"`
 }
 
@@ -23,11 +23,11 @@ type LockedPackage struct {
 
 // LockedDep records a resolved dependency in the lockfile.
 type LockedDep struct {
-	Name     string `json:"name" yaml:"name"`
+	Name     string      `json:"name" yaml:"name"`
 	Type     PackageType `json:"type,omitempty" yaml:"type,omitempty"`
-	Version  string `json:"version" yaml:"version"`
-	Resolved string `json:"resolved" yaml:"resolved"`
-	Source   string `json:"source,omitempty" yaml:"source,omitempty"`
+	Version  string      `json:"version" yaml:"version"`
+	Resolved string      `json:"resolved" yaml:"resolved"`
+	Source   string      `json:"source,omitempty" yaml:"source,omitempty"`
 }
 
 // LockfileEnvSnapshot captures the package counts at lock time.

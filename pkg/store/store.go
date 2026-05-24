@@ -283,9 +283,9 @@ func (s *Store) listStoreEntries() ([]string, error) {
 				continue
 			}
 			for _, versionEntry := range versionEntries {
-			if versionEntry.IsDir() {
-				continue
-			}
+				if versionEntry.IsDir() {
+					continue
+				}
 				entry := filepath.Join(typeDir.Name(), sourceDir.Name(), versionEntry.Name())
 				entries = append(entries, entry)
 			}

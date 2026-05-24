@@ -684,9 +684,9 @@ func TestMerge_NilInputs(t *testing.T) {
 
 func TestMerge_SixTypes(t *testing.T) {
 	base := &EnvironmentSpec{
-		Name:    "base",
-		Skills:  map[string]PackageRef{"s1": {Source: "github:a/s1", Version: "*"}},
-		MCPs:    map[string]PackageRef{"m1": {Source: "npm:m1", Version: "*"}},
+		Name:   "base",
+		Skills: map[string]PackageRef{"s1": {Source: "github:a/s1", Version: "*"}},
+		MCPs:   map[string]PackageRef{"m1": {Source: "npm:m1", Version: "*"}},
 	}
 	overlay := &EnvironmentSpec{
 		Agents:  map[string]PackageRef{"a1": {Source: "github:a/a1", Version: "*"}},

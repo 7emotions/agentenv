@@ -15,8 +15,8 @@ import (
 
 // NPMSource fetches packages from the npm registry.
 type NPMSource struct {
-	client    *http.Client
-	baseURL   string
+	client  *http.Client
+	baseURL string
 }
 
 func (n *NPMSource) httpClient() *http.Client {
@@ -44,8 +44,8 @@ type npmVersion struct {
 }
 
 type npmDist struct {
-	Tarball string `json:"tarball"`
-	SHA256  string `json:"shasum"` // npm returns sha1 as "shasum"
+	Tarball   string `json:"tarball"`
+	SHA256    string `json:"shasum"`    // npm returns sha1 as "shasum"
 	Integrity string `json:"integrity"` // e.g., "sha512-..."
 }
 

@@ -384,12 +384,12 @@ func TestLockWithTransitiveDeps(t *testing.T) {
 
 	ts := &testSource{
 		versions: map[string][]string{
-			"github:test/main-pkg": {"1.0.0"},
+			"github:test/main-pkg":  {"1.0.0"},
 			"github:agentenv/dep-a": {"1.0.0"},
 			"github:agentenv/dep-b": {"1.0.0"},
 		},
 		pkgs: map[string][]byte{
-			"github:test/main-pkg":   makePkgYAML("main-pkg", "1.0.0", "dep-a@^1.0", "dep-b@^1.0"),
+			"github:test/main-pkg":  makePkgYAML("main-pkg", "1.0.0", "dep-a@^1.0", "dep-b@^1.0"),
 			"github:agentenv/dep-a": makePkgYAML("dep-a", "1.0.0"),
 			"github:agentenv/dep-b": makePkgYAML("dep-b", "1.0.0"),
 		},

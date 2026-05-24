@@ -148,9 +148,9 @@ func TestGitHubFetchRateLimit(t *testing.T) {
 
 func TestExtractTarballSubPath(t *testing.T) {
 	files := map[string][]byte{
-		"testdata/hello.txt":    []byte("hello"),
+		"testdata/hello.txt":     []byte("hello"),
 		"testdata/sub/world.txt": []byte("world"),
-		"other/file.txt":        []byte("other"),
+		"other/file.txt":         []byte("other"),
 	}
 	tarGzData := makeTarGzWithPrefix(t, "owner-repo-abc123", files)
 

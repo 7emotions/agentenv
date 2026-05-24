@@ -358,9 +358,9 @@ type resolverSource struct {
 	getHandler     func(string) (source.SourceHandler, error)
 	depSource      func(name, pkgType string) string
 	sourceURLMap   map[string]string                    // encoded name -> explicit source URL
-	rootConstraint map[string]PackageRequest             // encoded name -> request (for latest/* handling)
-	versionCache   map[string][]pubgrub.Version          // encoded name -> versions
-	depCache       map[string]map[string][]pubgrub.Term  // encoded name -> version string -> terms
+	rootConstraint map[string]PackageRequest            // encoded name -> request (for latest/* handling)
+	versionCache   map[string][]pubgrub.Version         // encoded name -> versions
+	depCache       map[string]map[string][]pubgrub.Term // encoded name -> version string -> terms
 }
 
 func (s *resolverSource) resolveSourceURL(name pubgrub.Name) (string, error) {

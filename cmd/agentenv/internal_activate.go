@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	agentenvError "github.com/7emotions/agentenv/pkg/errors"
 	"github.com/7emotions/agentenv/pkg/adapter"
 	"github.com/7emotions/agentenv/pkg/envfile"
+	agentenvError "github.com/7emotions/agentenv/pkg/errors"
 	"github.com/7emotions/agentenv/pkg/lockfile"
 	"github.com/7emotions/agentenv/pkg/store"
 	"github.com/7emotions/agentenv/pkg/types"
@@ -536,7 +536,7 @@ func installAgentFromStore(ctx context.Context, a adapter.AgentAdapter,
 
 	// Look for .md files in the extracted directory
 	var mdPath string
-		filepath.WalkDir(extractDir, func(path string, d os.DirEntry, err error) error {
+	filepath.WalkDir(extractDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

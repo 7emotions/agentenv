@@ -91,8 +91,8 @@ type AgentAdapter interface {
 // Manifest tracks agentenv-managed resources (skills, MCP servers, agents)
 // for a single agent instance.
 type Manifest struct {
-	Version    int                    `json:"version"`
-	EnvName    string                 `json:"env_name"`
+	Version    int                     `json:"version"`
+	EnvName    string                  `json:"env_name"`
 	Skills     map[string]ManifestItem `json:"skills,omitempty"`
 	MCPServers map[string]ManifestItem `json:"mcp_servers,omitempty"`
 	Agents     map[string]ManifestItem `json:"agents,omitempty"`
