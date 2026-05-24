@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"slices"
 	"strconv"
 	"strings"
@@ -16,19 +15,12 @@ import (
 	"github.com/contriboss/pubgrub-go"
 )
 
-// Logger is the minimal interface used by PubGrubResolver for logging.
-// Standard *log.Logger satisfies this interface.
-type Logger interface {
-	Printf(format string, v ...interface{})
-}
-
 // PubGrubResolver resolves dependencies using the PubGrub algorithm.
 // It implements the DependencyResolver interface.
 type PubGrubResolver struct {
 	handlers  map[string]source.SourceHandler
 	depSource func(name, pkgType string) string
 	maxSteps  int
-	logger    Logger
 }
 
 // PubGrubResolverOption configures a PubGrubResolver.
@@ -49,20 +41,12 @@ func WithMaxSteps(n int) PubGrubResolverOption {
 	}
 }
 
-// WithLogger sets the logger for resolution progress and warnings.
-func WithLogger(l Logger) PubGrubResolverOption {
-	return func(r *PubGrubResolver) {
-		r.logger = l
-	}
-}
-
 const defaultMaxSteps = 10000
 
 // NewPubGrubResolver creates a new PubGrubResolver with the given options.
 func NewPubGrubResolver(opts ...PubGrubResolverOption) *PubGrubResolver {
 	r := &PubGrubResolver{
 		maxSteps: defaultMaxSteps,
-		logger:   log.Default(),
 	}
 	for _, opt := range opts {
 		opt(r)

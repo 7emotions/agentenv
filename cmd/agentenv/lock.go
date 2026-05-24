@@ -20,7 +20,6 @@ import (
 )
 
 var (
-	lockUpdate bool
 	lockStrict bool
 )
 
@@ -306,7 +305,6 @@ func isTerminal(w interface{}) bool {
 }
 
 func init() {
-	lockCmd.Flags().BoolVar(&lockUpdate, "update", false, "Update existing lockfile")
 	lockCmd.Flags().BoolVar(&lockStrict, "strict", false, "Fail on non-deterministic or conflicting constraints")
 	rootCmd.AddCommand(lockCmd)
 }

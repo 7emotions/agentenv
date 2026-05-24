@@ -62,7 +62,7 @@ func (s *agentenvSource) GetVersions(name pubgrub.Name) ([]pubgrub.Version, erro
 	for _, raw := range rawVersions {
 		sv, err := pubgrub.ParseSemanticVersion(raw)
 		if err != nil {
-			continue // match SortVersions behaviour: skip invalid silently
+			continue // invalid versions are silently skipped
 		}
 		result = append(result, sv)
 	}
