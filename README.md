@@ -19,24 +19,31 @@
 ## Quick Start / 快速开始
 
 ```bash
-# Install
+# Install | 安装
 curl -fsSL https://raw.githubusercontent.com/7emotions/agentenv/main/install.sh | sh
 
-# Create your first environment
-agentenv create my-env
+# Create a workspace with a specific framework | 创建指定框架的环境
+agentenv create my-env --agent opencode
 
-# Add a skill from GitHub
-agentenv add skill code-reviewer --source github:myorg/code-review-skill
+# Add packages from anywhere | 从各种源添加包
+agentenv add skill code-reviewer --source github:myorg/reviewer --version "^0.5"
+agentenv add mcp filesystem --source npm:@modelcontextprotocol/server-filesystem \
+  --command npx --arg -y --arg @modelcontextprotocol/server-filesystem --arg /tmp
 
-# Resolve dependencies
+# Resolve: PubGrub finds the best version for every package | 依赖解析
 agentenv lock
+
+# Fetch packages into the store | 安装到本地存储
 agentenv install
 
-# Activate
+# Activate: inject into your framework | 激活：注入到框架配置
 agentenv activate my-env
+
+# Done — your agent is ready to use all packages | 完成
+agentenv deactivate  # switch back when done | 用完后停用
 ```
 
-> 中文：快速上手 — 一条命令安装，几步创建你的第一个 AI 环境。添加技能、解析依赖、激活环境，全程无需手动配置。
+> 中文：一条命令安装，几步创建。支持 6 种源（GitHub、npm、本地等）、6 种包类型（技能、MCP、智能体等）、4 种框架适配器。依赖解析由 PubGrub 引擎自动完成。
 
 ---
 
