@@ -804,7 +804,7 @@ Max Concurrent: 5 (Waves 1, 3)
 
   **Commit**: YES — `test(resolver): edge cases for PubGrub (cancel/empty/notags/conflict)` — `pkg/resolver/pubgrub_resolver_test.go`
 
-- [ ] 23. go.mod tidy + build + vet 最终检查
+- [x] 23. go.mod tidy + build + vet 最终检查
 
   **What to do**: `go mod tidy && go build ./... && go vet ./... && go test -race ./...`
 
@@ -832,16 +832,16 @@ Max Concurrent: 5 (Waves 1, 3)
 
 > 4 review agents run in PARALLEL. ALL must APPROVE. Present results to user → get explicit "okay".
 
-- [ ] F1. **Plan Compliance Audit** — `oracle`
+- [x] F1. **Plan Compliance Audit** — `oracle`
   Read plan end-to-end. Verify: Must Have (7 items) all present; Must NOT Have (10 items) all absent. Check evidence files in `.sisyphus/evidence/`. Compare deliverables against plan.
 
-- [ ] F2. **Code Quality Review** — `unspecified-high`
+- [x] F2. **Code Quality Review** — `unspecified-high`
   Run `go build ./...` + `go vet ./...` + `go test -race ./...`. Review all changed files for: `as any`/`@ts-ignore` equivalence, empty catches, dead code, AI slop (excessive comments, over-abstraction, generic names).
 
-- [ ] F3. **Real Manual QA** — `unspecified-high`
+- [x] F3. **Real Manual QA** — `unspecified-high`
   Execute EVERY QA scenario from EVERY task. Test cross-task integration. Verify: TDD tests all GREEN, lockfile v3 output correct, diamond conflict error clear, v1→v3 migration works. Save to `.sisyphus/evidence/final-qa/`.
 
-- [ ] F4. **Scope Fidelity Check** — `deep`
+- [x] F4. **Scope Fidelity Check** — `deep`
   For each task: read "What to do", read actual diff. Verify 1:1 — nothing missing, nothing extra. Check Must NOT compliance. Detect cross-task contamination.
 
 ---
