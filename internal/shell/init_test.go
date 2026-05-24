@@ -60,12 +60,141 @@ func TestGenerateInitScript_Output(t *testing.T) {
 	}
 }
 
-func TestGenerateInitScript_BashSyntax(t *testing.T) {
+func TestGenerateInitScript_CdHookIncluded(t *testing.T) {
+	tests := []struct {
+		shell string
+	}{
+		{"bash"},
+		{"zsh"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.shell, func(t *testing.T) {
+			// Default: cd hook should be included
+			script, err := GenerateInitScript(tt.shell)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !strings.Contains(script, "_agentenv_cd_hook") {
+				t.Error("default init script should include cd hook, but missing _agentenv_cd_hook")
+			}
+			if !strings.Contains(script, "__agentenv_cd") {
+				t.Error("default init script should include cd hook, but missing __agentenv_cd")
+			}
+			if !strings.Contains(script, "alias cd=__agentenv_cd") {
+				t.Error("default init script should alias cd, but missing alias")
+			}
+			if !strings.Contains(script, "agent.yaml") {
+				t.Error("default init script should check for agent.yaml")
+			}
+		})
+	}
+}
+
+func TestGenerateInitScript_CdHookExcluded(t *testing.T) {
+	tests := []struct {
+		shell string
+	}{
+		{"bash"},
+		{"zsh"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.shell, func(t *testing.T) {
+			opts := InitOptions{NoCdHook: true}
+			script, err := GenerateInitScript(tt.shell, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if strings.Contains(script, "_agentenv_cd_hook") {
+				t.Error("NoCdHook=true script should NOT include cd hook, but found _agentenv_cd_hook")
+			}
+			if strings.Contains(script, "__agentenv_cd") {
+				t.Error("NoCdHook=true script should NOT include cd hook, but found __agentenv_cd")
+			}
+			if strings.Contains(script, "alias cd=__agentenv_cd") {
+				t.Error("NoCdHook=true script should NOT alias cd, but found alias")
+			}
+		})
+	}
+}
+
+func TestGenerateInitScript_CdHookBashSyntax(t *testing.T) {
 	if _, err := exec.LookPath("bash"); err != nil {
 		t.Skip("bash not available")
 	}
 
 	script, err := GenerateInitScript("bash")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tmpFile, err := os.CreateTemp(t.TempDir(), "agentenv-bash-cd-*.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tmpFile.Close()
+
+	if _, err := tmpFile.WriteString(script); err != nil {
+		t.Fatal(err)
+	}
+	tmpFile.Close()
+
+	// Verify syntax with bash -n
+	cmd := exec.Command("bash", "-n", tmpFile.Name())
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("bash -n (with cd hook) failed: %v\n%s", err, out)
+	}
+
+	// Verify set -euo pipefail compatibility
+	cmd = exec.Command("bash", "-c", "set -euo pipefail && source "+tmpFile.Name())
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("set -euo pipefail source (with cd hook) failed: %v\n%s", err, out)
+	}
+}
+
+func TestGenerateInitScript_CdHookZshSyntax(t *testing.T) {
+	if _, err := exec.LookPath("zsh"); err != nil {
+		t.Skip("zsh not available")
+	}
+
+	script, err := GenerateInitScript("zsh")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tmpFile, err := os.CreateTemp(t.TempDir(), "agentenv-zsh-cd-*.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tmpFile.Close()
+
+	if _, err := tmpFile.WriteString(script); err != nil {
+		t.Fatal(err)
+	}
+	tmpFile.Close()
+
+	// Verify syntax with zsh -n
+	cmd := exec.Command("zsh", "-n", tmpFile.Name())
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("zsh -n (with cd hook) failed: %v\n%s", err, out)
+	}
+
+	// Verify set -euo pipefail compatibility
+	cmd = exec.Command("zsh", "-c", "set -euo pipefail && source "+tmpFile.Name())
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("set -euo pipefail source (with cd hook) failed: %v\n%s", err, out)
+	}
+}
+
+func TestGenerateInitScript_BashSyntax(t *testing.T) {
+	if _, err := exec.LookPath("bash"); err != nil {
+		t.Skip("bash not available")
+	}
+
+	script, err := GenerateInitScript("bash", InitOptions{NoCdHook: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +228,7 @@ func TestGenerateInitScript_ZshSyntax(t *testing.T) {
 		t.Skip("zsh not available")
 	}
 
-	script, err := GenerateInitScript("zsh")
+	script, err := GenerateInitScript("zsh", InitOptions{NoCdHook: true})
 	if err != nil {
 		t.Fatal(err)
 	}

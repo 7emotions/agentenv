@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var initNoCdHook bool
+
 var initCmd = &cobra.Command{
 	Use:   "init <shell>",
 	Short: "Generate shell init script for shell integration",
@@ -15,6 +17,9 @@ var initCmd = &cobra.Command{
 
 This command outputs a shell script that defines the 'agentenv()' shell function,
 enabling environment activation/deactivation within the current shell session.
+
+By default, the script also includes a cd hook that auto-activates environments
+when you cd into a directory containing agent.yaml. Use --no-cd-hook to disable.
 
 Usage in your shell config:
   eval "$(agentenv init zsh)"   # add to ~/.zshrc
@@ -36,7 +41,8 @@ Supported shells: zsh, bash`,
 			return nil
 		}
 
-		script, err := shell.GenerateInitScript(shellName)
+		opts := shell.InitOptions{NoCdHook: initNoCdHook}
+		script, err := shell.GenerateInitScript(shellName, opts)
 		if err != nil {
 			return agentenvError.SystemError(
 				fmt.Sprintf("Cannot generate init script for %s", shellName),
@@ -49,4 +55,5 @@ Supported shells: zsh, bash`,
 
 func init() {
 	rootCmd.AddCommand(initCmd)
+	initCmd.Flags().BoolVar(&initNoCdHook, "no-cd-hook", false, "Disable auto-activation cd hook")
 }

@@ -7,11 +7,18 @@ import (
 	"text/template"
 )
 
+// InitOptions controls shell init script generation options.
+type InitOptions struct {
+	// NoCdHook disables the auto-activation cd hook in the init script.
+	NoCdHook bool
+}
+
 // InitScriptData holds the data for the shell init script template.
 type InitScriptData struct {
 	ShellName  string
 	BinaryPath string
 	Version    string
+	NoCdHook   bool
 }
 
 const initScriptTemplate = `# agentenv shell integration for {{.ShellName}}
@@ -62,6 +69,29 @@ autoload -Uz add-zsh-hook 2>/dev/null && add-zsh-hook precmd _agentenv_preprompt
 	precmd_functions+=(_agentenv_preprompt)
 }
 
+{{- if not .NoCdHook}}
+# Auto-activate/deactivate when cd'ing into/out of a directory with agent.yaml
+_agentenv_cd_hook() {
+	if [ -f "$PWD/agent.yaml" ]; then
+		local _env_name
+		_env_name="$(basename "$PWD")"
+		if [ -d "$HOME/.agentenv/envs/$_env_name" ]; then
+			if [ -z "${AGENTENV_ACTIVE:-}" ] || [ "$AGENTENV_ACTIVE" != "$_env_name" ]; then
+				agentenv activate "$_env_name" 2>/dev/null || true
+			fi
+		fi
+	elif [ -n "${AGENTENV_ACTIVE:-}" ]; then
+		agentenv deactivate 2>/dev/null || true
+	fi
+}
+
+__agentenv_cd() {
+	builtin cd "$@" || return
+	_agentenv_cd_hook
+}
+
+alias cd=__agentenv_cd
+{{end}}
 agentenv() {
 	if [ $# -eq 0 ]; then
 		"$_agentenv_binary"
@@ -116,7 +146,8 @@ agentenv() {
 
 // GenerateInitScript generates a shell init script for the given shell.
 // Supported shells: "zsh", "bash".
-func GenerateInitScript(shell string) (string, error) {
+// Options can be provided via InitOptions to control script features.
+func GenerateInitScript(shell string, opts ...InitOptions) (string, error) {
 	if shell != "zsh" && shell != "bash" {
 		return "", fmt.Errorf("unsupported shell: %s (supported: zsh, bash)", shell)
 	}
@@ -130,6 +161,9 @@ func GenerateInitScript(shell string) (string, error) {
 		ShellName:  shell,
 		BinaryPath: binaryPath,
 		Version:    "0.1.0-dev",
+	}
+	if len(opts) > 0 {
+		data.NoCdHook = opts[0].NoCdHook
 	}
 
 	tmpl, err := template.New("init").Parse(initScriptTemplate)
