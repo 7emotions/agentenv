@@ -1,0 +1,465 @@
+.TH AGENTENV 1 "2026-05-24" "agentenv" "User Commands"
+
+.SH NAME
+agentenv \- AI agent environment management CLI
+
+.SH SYNOPSIS
+.B agentenv
+.RI [ global-flags ] "command" " [ command-flags ] [" args "...]
+
+.SH DESCRIPTION
+.B agentenv
+is an environment manager for AI agents \(em think conda, but for skills, MCP
+servers, agents, tools, hooks, and prompts.
+
+It provides isolated, reproducible environments under
+.IR ~/.agentenv/ .
+Environments are defined declaratively in
+.IR agent.yaml ,
+dependencies are resolved with a PubGrub CDCL solver into
+.IR agent.lock ,
+and packages are fetched into a content-addressed store with symlink
+dedup and garbage collection.
+
+.B agentenv
+supports 4 framework adapters (Claude Code, OpenCode, Cursor, Codex), 6
+package types (skill, mcp, agent, tool, hook, prompt), and 6 source
+schemes (github, npm, local, git, file, url).
+
+.SH OPTIONS
+The following options are available for all commands:
+.TP
+.B \-\-json
+Enable JSON output format for machine-readable results.
+.TP
+.B \-\-debug
+Enable debug output with stack traces on errors.
+.TP
+.B \-\-help
+Show help for the given command.
+.TP
+.B \-\-version
+Show version information.
+
+.SH COMMANDS
+.SS Environment Lifecycle
+.TP
+.B create
+.B create <name>
+Create a new agent environment under
+.IR ~/.agentenv/envs/<name>/ .
+Initializes the environment directory with an
+.I agent.yaml
+manifest and a
+.I state.json
+tracking file.
+.RS
+.TP
+.B \-\-agent <name>
+Agent framework to use (default: claude-code).
+.TP
+.B \-\-from <env>
+Source environment or template to copy from.
+.TP
+.B \-\-empty
+Skip creating agent.yaml (cold-start env).
+.RE
+
+.TP
+.B delete
+.B delete <name>
+Delete an environment and all its files from
+.IR ~/.agentenv/envs/<name>/ .
+The operation is irreversible.
+.RS
+.TP
+.B \-\-force
+Force deletion even if the environment is active.
+.RE
+
+.TP
+.B list
+List all agent environments under
+.IR ~/.agentenv/envs/ .
+Displays the name, agent framework, and activation status for each
+environment.
+
+.SS Package Management
+.TP
+.B add
+.B add <type> <name> \-\-source <url>
+Add a package to the currently active environment's
+.IR agent.yaml .
+.RS
+Supported types: skill, mcp, agent, tool, hook, prompt.
+.TP
+.B \-\-source <url>
+Package source URL (required). Supported schemes:
+.RS
+github:owner/repo[/path]
+.br
+npm:@scope/package
+.br
+local:./path or local:/absolute/path
+.br
+git:https://example.com/repo.git
+.br
+file:/absolute/path
+.br
+url:https://example.com/pkg.tar.gz
+.RE
+.TP
+.B \-\-version <constraint>
+Version constraint, e.g. ^1.0.0 or >=2.0.
+.TP
+.B \-\-dev
+Mark as development dependency.
+.TP
+.B \-\-dry-run
+Show what would be added without modifying files.
+.RE
+
+.TP
+.B remove
+.B remove [<type>] <name>
+Remove a package from the currently active environment's
+.IR agent.yaml .
+If
+.I <type>
+is omitted, all sections are searched. If the name is found in more
+than one section, the type must be specified.
+
+.TP
+.B list-packages
+.B list-packages [name]
+List all packages (skills, MCPs, agents, tools, hooks, prompts) defined
+in an environment's
+.IR agent.yaml .
+If name is omitted, the currently active environment is used.
+.RS
+.TP
+.B \-\-type <type>
+Filter by package type.
+.TP
+.B \-\-tree
+Show a hierarchical view grouped by type.
+.RE
+
+.SS Dependency Resolution
+.TP
+.B lock
+.B lock [name]
+Read
+.IR agent.yaml ,
+resolve all dependencies using the PubGrub CDCL solver, and generate
+.IR agent.lock .
+The environment to lock is determined by: (1) a given name, (2) the
+current directory if it has an
+.IR agent.yaml ,
+or (3) the active environment.
+.RS
+.TP
+.B \-\-strict
+Fail on non-deterministic or conflicting constraints.
+.RE
+
+.TP
+.B install
+.B install [name]
+Read
+.IR agent.lock
+(or
+.I agent.yaml
+if no lockfile) and fetch all packages into the local content-addressed
+store at
+.IR ~/.agentenv/store/ .
+If the environment is currently active, trigger re-activation.
+.RS
+.TP
+.B \-\-file <path>
+Use an alternate agent.yaml file.
+.RE
+
+.SS Environment Activation
+.TP
+.B activate
+.B activate <name>
+Activate an environment: install all packages (skills, MCP servers,
+agents) into the current framework's configuration. Activation is
+transactional \(em it backs up your framework config, validates the new
+config, applies changes, and rolls back on failure.
+
+This command is typically invoked through the shell function set up by
+.BR "agentenv init" .
+
+.TP
+.B deactivate
+Deactivate the currently active environment: remove all managed skills,
+MCP servers, and agents from the framework config, restore the
+pre-activation MCP configuration, and remove the ACTIVE lock.
+
+This command is typically invoked through the shell function set up by
+.BR "agentenv init" .
+
+.SS Information
+.TP
+.B info
+.B info [name]
+Show detailed information about an environment, including name, path,
+agent framework, package count, creation date, and activation status.
+If name is omitted, the currently active environment is shown.
+
+.TP
+.B list-adapters
+List all registered agent adapters with their display names.
+Available adapters:
+.RS
+.TP
+claude-code
+Claude Code
+.TP
+opencode
+OpenCode
+.TP
+cursor
+Cursor
+.TP
+codex
+Codex
+.RE
+
+.SS Shell Integration
+.TP
+.B init
+.B init <shell>
+Generate a shell init script that integrates
+.B agentenv
+with your shell. This defines the
+.B agentenv()
+shell function, enabling environment activation within the current
+shell session.
+.RS
+Supported shells: zsh, bash.
+.TP
+.B \-\-no-cd-hook
+Disable the auto-activation cd hook.
+.RE
+Usage in your shell config:
+.RS
+.nf
+eval "$(agentenv init zsh)"   # add to ~/.zshrc
+eval "$(agentenv init bash)"  # add to ~/.bashrc
+.fi
+.RE
+
+.TP
+.B completion
+.B completion [bash|zsh|fish|powershell]
+Generate shell completion script for
+.B agentenv
+commands. The completion script can be sourced to enable tab
+completion.
+.RS
+Examples:
+.nf
+source <(agentenv completion bash)
+source <(agentenv completion zsh)
+.fi
+To make it permanent:
+.nf
+agentenv completion bash > /etc/bash_completion.d/agentenv
+agentenv completion zsh > "${fpath[1]}/_agentenv"
+.fi
+.RE
+
+.SH ENVIRONMENT
+.TP
+.B HOME
+Used to locate the
+.IR ~/.agentenv/
+directory. Must be set and accessible.
+.TP
+.B VERSION
+If set, overrides the embedded version string (used in development).
+
+.SH FILES
+.TP
+.I ~/.agentenv/
+Root directory for all agentenv data.
+.TP
+.I ~/.agentenv/envs/<name>/
+Environment directory containing
+.IR agent.yaml ,
+.IR agent.lock ,
+and
+.IR state.json .
+.TP
+.I ~/.agentenv/ACTIVE
+Lock file indicating the currently active environment. Format:
+.I <name>:<framework>
+or legacy
+.I <name>
+format.
+.TP
+.I ~/.agentenv/store/
+Content-addressed package store with symlink dedup and garbage
+collection.
+.TP
+.I ~/.agentenv/backups/
+Backup directory containing pre-activation framework config snapshots.
+.TP
+.I agent.yaml
+Environment definition file. Declares the environment name,
+description, and all packages with their sources, versions, and
+configuration.
+.TP
+.I agent.lock
+Deterministic lockfile generated by
+.BR "agentenv lock" .
+Contains resolved versions, SHA-256 integrity hashes, and transitive
+dependency information.
+
+.SH EXAMPLES
+.SS Quick Start
+.nf
+# Create a workspace with a specific framework
+agentenv create my-env --agent opencode
+
+# Add packages from anywhere
+agentenv add skill code-reviewer --source github:myorg/reviewer --version "^0.5"
+agentenv add mcp filesystem --source npm:@modelcontextprotocol/server-filesystem \\
+  --command npx --arg -y --arg @modelcontextprotocol/server-filesystem --arg /tmp
+
+# Resolve: PubGrub finds the best version for every package
+agentenv lock
+
+# Fetch packages into the store
+agentenv install
+
+# Activate: inject into your framework
+agentenv activate my-env
+
+# Done \(em your agent is ready to use all packages
+agentenv deactivate  # switch back when done
+.fi
+
+.SS Full Workflow
+.nf
+# 1. Create a project environment
+cd ~/projects/my-ai-project
+agentenv create .
+
+# 2. Add packages of different types
+agentenv add skill code-reviewer --source github:myorg/code-review-skill
+agentenv add mcp filesystem \\
+  --source npm:@modelcontextprotocol/server-filesystem \\
+  --command npx --arg -y \\
+  --arg @modelcontextprotocol/server-filesystem \\
+  --arg /tmp/projects
+agentenv add agent my-helper --source github:myorg/helper-agent
+
+# 3. Check the declaration
+cat agent.yaml
+
+# 4. Resolve dependencies
+agentenv lock
+
+# 5. Inspect the lockfile
+cat agent.lock
+
+# 6. Download packages into the store
+agentenv install
+
+# 7. Activate (installs into your framework)
+agentenv activate my-ai-project
+
+# 8. Verify what is installed
+agentenv list-packages
+agentenv info my-ai-project
+
+# 9. When done
+agentenv deactivate
+.fi
+
+.SS Shell Integration with cd Hook
+.nf
+# Add to ~/.zshrc or ~/.bashrc
+eval "$(agentenv init zsh)"
+
+# Now cd into any directory with agent.yaml to auto-activate
+cd ~/projects/my-ai-project
+# agentenv auto-activates the environment
+.fi
+
+.SS JSON Output for Scripting
+.nf
+# Get environment info as JSON
+agentenv info my-env --json | jq .
+
+# List all environments
+agentenv list --json | jq '.[].name'
+
+# List packages with versions
+agentenv list-packages --json | jq '[.[] | {name, type, resolved}]'
+.fi
+
+.SS Managing Environments
+.nf
+# List all environments
+agentenv list
+
+# Show details for an environment
+agentenv info my-env
+
+# Delete an environment
+agentenv delete my-env
+
+# Force delete an active environment
+agentenv delete my-env --force
+.fi
+
+.SS Exploring Framework Adapters
+.nf
+# List available adapters
+agentenv list-adapters
+
+# Create an environment for a specific framework
+agentenv create --agent opencode my-opencode-env
+agentenv create --agent cursor my-cursor-env
+agentenv create --agent codex my-codex-env
+.fi
+
+.SH DIAGNOSTICS
+.B agentenv
+exits with 0 on success and non-zero on error. Error codes:
+.TP
+1
+General error (unknown command, invalid arguments).
+.TP
+2
+User error (invalid input, missing argument, environment
+not found).
+.TP
+3
+System error (I/O failure, permission denied, disk full).
+.TP
+4
+Network error (download failure, unresolved host).
+
+All errors are structured and include a description of what went wrong
+and how to fix it. Use
+.B \-\-debug
+to get a full stack trace.
+
+.SH BUGS
+Report bugs and feature requests at:
+.br
+https://github.com/7emotions/agentenv/issues
+
+.SH SEE ALSO
+.BR agentenv (7),
+.br
+.IR https://github.com/7emotions/agentenv
+
+.SH LICENSE
+MIT License. No telemetry, no phone-home, no tracking.
