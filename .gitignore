@@ -24,3 +24,10 @@ agentenv
 
 # CodeGraph
 .codegraph/
+
+# Sisyphus session state (plans are kept as documentation)
+.sisyphus/boulder.json
+.sisyphus/drafts/
+.sisyphus/evidence/
+.sisyphus/notepads/
+.sisyphus/run-continuation/
