@@ -24,7 +24,7 @@ agentenv create my-env
 # Add a skill from GitHub
 agentenv add skill code-reviewer --source github:myorg/code-review-skill
 
-# Lock and install dependencies
+# Resolve dependencies
 agentenv lock
 agentenv install
 
@@ -53,6 +53,7 @@ agentenv is an **environment manager for AI agents** — think conda, but for sk
 - **6 package types** — skill, mcp, agent, tool, hook, prompt. Mix freely in one environment.
 - **4 framework adapters** — Claude Code, OpenCode, Cursor, Codex. All 16 methods per adapter.
 - **6 source schemes** — `github:`, `npm:`, `local:`, `git:`, `file:`, `url:`. Pull packages from anywhere.
+- **PubGrub dependency resolution** — CDCL version solving with transitive dependency discovery, constraint checking, and clear conflict reporting
 - **Deterministic lockfiles** — agent.yaml → agent.lock, semver constraints, transitive deps, SHA-256 integrity.
 - **Content-addressed store** — symlink deduplication, cross-filesystem copy fallback, garbage collection.
 - **Transactional activation** — backup → validate → apply → rollback on failure. No partial state.
@@ -144,7 +145,7 @@ mcps:
 
 ```json
 {
-  "version": 1,
+  "version": 3,
   "generated": "2026-05-24T12:00:00Z",
   "packages": [
     {
@@ -154,12 +155,14 @@ mcps:
       "version": ">=0.5",
       "resolved": "0.7.2",
       "sha256": "abc123...",
+      "resolved_by": "(root)",
       "dependencies": [
         {
           "name": "lint-helper",
           "version": "^1.0",
           "resolved": "1.2.0",
-          "source": ""
+          "source": "",
+          "type": "skill"
         }
       ]
     }
@@ -176,8 +179,9 @@ mcps:
 ```
 
 - Packages are sorted by `(type, name)` for deterministic output
-- v1 lockfiles auto-migrate to v2 on read — no data loss
-- `agentenv lock` always writes v2 format
+- v1 lockfiles auto-migrate to v3 on read — no data loss
+- `agentenv lock` always writes v3 format
+- Each package tracks its `resolved_by` parent — root packages show `(root)`, transitive deps show their parent's name.
 
 [Full format reference →](docs/agent-lock.md)
 
@@ -214,7 +218,12 @@ agentenv CLI (cobra)
 ├── pkg/parser/            → YAML/JSON parsers
 ├── pkg/envfile/           → agent.yaml read/write/validate/merge
 ├── pkg/source/            → Source fetchers (github, npm, local, git)
-├── pkg/resolver/          → Dependency resolver (topological, semver, backtracking)
+├── pkg/resolver/          → PubGrub dependency solver (CDCL algorithm)
+│   ├── types.go           → Shared types + manifest extraction
+│   ├── pubgrub_resolver.go → PubGrubResolver (DependencyResolver impl)
+│   ├── pubgrub_adapter.go → SourceHandler → pubgrub Source adapter
+│   ├── pubgrub_err.go     → Conflict error reporting
+│   └── namespace.go       → Type-safe name encoding
 ├── pkg/store/             → Content-addressed store (symlink dedup, GC, cache)
 └── pkg/errors/            → Structured errors (User/System/Network)
 ```
@@ -248,7 +257,7 @@ cd agentenv && make build
 
 - **No telemetry** — zero analytics, zero tracking, zero phone-home
 - **No plugins** — all adapters registered at compile time via `init()`
-- **No SAT solver** — topological sort with backtracking; interface designed for future algorithm swap
+- **PubGrub CDCL resolver** — handles complex dependency graphs with conflict learning
 - **No Windows** — deliberate scope boundary
 - **No breaking JSONC** — OpenCode config comments are preserved, not stripped
 
