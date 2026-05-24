@@ -7,7 +7,7 @@ import (
 )
 
 var completionCmd = &cobra.Command{
-	Use:   "completion [bash|zsh]",
+	Use:   "completion [bash|zsh|fish|powershell]",
 	Short: "Generate shell completion script",
 	Long: `Generate shell completion script for agentenv commands.
 
@@ -19,6 +19,12 @@ The completion script can be sourced to enable tab completion:
   # Zsh
   source <(agentenv completion zsh)
 
+  # Fish
+  agentenv completion fish | source
+
+  # PowerShell
+  agentenv completion powershell | Out-String | Invoke-Expression
+
 To make it permanent:
 
   # Bash (Linux)
@@ -29,9 +35,15 @@ To make it permanent:
 
   # Zsh
   agentenv completion zsh > "${fpath[1]}/_agentenv"
+
+  # Fish
+  agentenv completion fish > ~/.config/fish/completions/agentenv.fish
+
+  # PowerShell
+  agentenv completion powershell >> $PROFILE
 `,
 	DisableFlagsInUseLine: true,
-	ValidArgs:             []string{"bash", "zsh"},
+	ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
 	Args:                  cobra.ExactValidArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		switch args[0] {
@@ -39,8 +51,12 @@ To make it permanent:
 			return rootCmd.GenBashCompletion(cmd.OutOrStdout())
 		case "zsh":
 			return rootCmd.GenZshCompletion(cmd.OutOrStdout())
+		case "fish":
+			return rootCmd.GenFishCompletion(cmd.OutOrStdout(), false)
+		case "powershell":
+			return rootCmd.GenPowerShellCompletion(cmd.OutOrStdout())
 		default:
-			return fmt.Errorf("unsupported shell: %s (use bash or zsh)", args[0])
+			return fmt.Errorf("unsupported shell: %s (use bash, zsh, fish, or powershell)", args[0])
 		}
 	},
 }
