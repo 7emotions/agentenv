@@ -96,6 +96,36 @@ agentenvError.NetworkError("what happened", "how to fix it")
 - Order: backup → validate → apply → rollback on failure
 - Never leaves partial state. Backups stored in config directory
 
+## Reference Projects
+
+### `iheanyi/agentctl` — Config Syncer for AI Coding Tools
+
+Not a dependency, but a well-studied peer project. Key differences and what we learned:
+[Full analysis → docs/learnings-agentctl.md]
+
+| agentctl | agentenv (us) |
+|----------|---------------|
+| Config syncer (sync servers across tools) | Package manager (resolve → install → activate) |
+| Composable adapter interface (4 base + optional) | Monolithic 16-method interface |
+| No dependency resolution | PubGrub CDCL |
+| No isolated environments | Environments under `~/.agentenv/envs/` |
+| `fmt.Errorf` only | Structured UserError/SystemError/NetworkError |
+| 11 adapters (incl. desktop/editor tools) | 4 adapters (coding CLI tools) |
+
+**Patterns we should adopt from agentctl:**
+- **Golden tests** for adapter MCP config translation. Write input → adapter.WriteMCPConfig() → compare to golden file. Use `UPDATE_GOLDENS=1` env var. [See docs/learnings-agentctl.md#1]
+- **Unicode output symbols** in non-JSON mode: ✓ (success), ✗ (error), • (info), ⚠ (warning). We already have `jsonOutput` dual mode — just unify the text side.
+- **`agentenv` no-args dashboard** — lightweight text panel (not TUI) showing environments, active status, next steps. TTY-detection gate via `isatty.IsTerminal()`.
+- **Next-step hints** after each command (e.g., after `create` → "Run 'agentenv add ...'", after `lock` → "Run 'agentenv install'").
+- **`agentenv doctor`** — parallel health checks: config validity, runtime availability (Go, git, npm), adapter detection, store integrity, source connectivity.
+
+**Patterns we should NOT replicate:**
+- Single-file 6k-line TUI monolith
+- Adapter registry without `sync.RWMutex` (ours is correct)
+- Config paths hardcoded in adapter structs (ours are injectable)
+- JSON/text output logic intertwined in list commands (ours uses `writeJSON` helper)
+- No `--debug` flag (ours has it with `runtime/debug.Stack()`)
+
 ## Release
 - Triggered by `v*` tags → GoReleaser builds darwin+linux, amd64+arm64 binaries
 - Published to GitHub Releases + Homebrew tap (`7emotions/homebrew-agentenv`)

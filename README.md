@@ -450,6 +450,20 @@ cd agentenv && make build
 
 ---
 
+### AgentEnv Pro
+
+AgentEnv is free and open source. **[AgentEnv Pro](docs/pro.md)** adds three features for teams and power users:
+
+| Feature | Description |
+|---------|-------------|
+| `agentenv sync` | Export/import environments as portable bundles — swap machines without rebuilding |
+| `agentenv bundle` | Package environments for team distribution — share your exact setup in one command |
+| `agentenv update --check` | Auto-check package updates with changelogs |
+
+**¥99 / $19 lifetime** (one-time, not subscription). [Get Pro →](https://gumroad.com/l/agentenv-pro)
+
+---
+
 ### License
 
 MIT — see [LICENSE](LICENSE).
@@ -893,6 +907,20 @@ cd agentenv && make build
 - **PubGrub CDCL 解析器** — 处理复杂依赖图与冲突学习
 - **不支持 Windows** — 有意的范围边界
 - **不破坏 JSONC** — OpenCode 配置注释完整保留
+
+---
+
+### AgentEnv Pro 专业版
+
+AgentEnv 开源免费。**[AgentEnv Pro](docs/pro.md)** 为团队和重度用户增加三个功能：
+
+| 功能 | 说明 |
+|---------|-------------|
+| `agentenv sync` | 导出/导入环境为便携包 — 换电脑不用重新配置 |
+| `agentenv bundle` | 打包环境供团队分发 — 一条命令共享你的完整配置 |
+| `agentenv update --check` | 自动检测包更新并显示 changelog |
+
+**¥99 / $19 永久买断**（一次付费，终身使用）。[获取 Pro →](https://gumroad.com/l/agentenv-pro)
 
 ---
 
